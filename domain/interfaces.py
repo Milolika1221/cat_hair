@@ -21,6 +21,7 @@ class ISessionRepository(ABC):
     async def add_image_to_session(self, session_id : int, image_data : dict) -> bool : pass
 
 
+
 class IRecommendationEngine(ABC):
     @abstractmethod
     async def get_recommendations(self, characteristics : CatCharacteristics) -> List[str] : pass
