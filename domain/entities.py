@@ -7,7 +7,7 @@ class UserSession:
     id : int
     user_id : int
     created_at : datetime
-    images : List[str] # полагаю в сессии может быть несколько запросов, потому листик
+    images : List[str] 
 
 
 """
