@@ -1,65 +1,84 @@
-from dataclasses import dataclass
-from typing import Optional, List
+from typing import List
 from datetime import datetime, time
+from sqlalchemy import String, Integer, ARRAY, DateTime, Boolean, Column, JSON, Float, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
-@dataclass
-class UserSession:
-    id : int
-    user_id : int
-    created_at : datetime
-    images : List[str] 
+Base = declarative_base()
 
+class Cats(Base):
+    __tablename__ = "Cats"
 
-"""
-Ниже просто классы сущностей из БД 
-"""
-@dataclass
-class Haircut:
-    haircut_id : int
-    name : str
-    description : str
-    suitable_body_types : str
-    suitable_colors : str
-    suitable_hair_lengths : str
-
-@dataclass
-class Cat:
-    cat_id : int
-    created_at : datetime
-
-@dataclass 
-class CatImage:
-    image_id : int
-    cat_id : int
-    file_path : str
-    resolution : str
-    format : str
-    uploadedAt : datetime
+    id = Column('CatID', Integer, primary_key=True, autoincrement=True)
+    created_at = Column('CreatedAt', DateTime, default=datetime.now)
     
-@dataclass
-class CatCharacteristics:
-    characteristics_id : int
-    cat_id : int
-    color : str
-    body_type : str 
-    hair_length : str
-    confidence_level : float
-    analyzedAt : datetime
+    processing_logs = relationship('ProcessingLogs', back_populates='cats')
+    cat_images = relationship('CatImages', back_populates='cats')
+    cat_characteristics = relationship('CatCharacteristics', back_populates='cats')
+    recommendations = relationship('Recommendations', back_populates='cats')
 
-@dataclass
-class Recommendation:
-    recommendation_id : int
-    cat_id : int
-    haircut_id : int
-    is_no_haircut_required : bool
-    reason : str
-    createdAt : datetime
+class Haircuts(Base):
+    __tablename__ = 'Haircuts'
 
-@dataclass
-class ProcessingLogs:
-    log_id : int
-    cat_id : int
-    processing_time : time
-    status : str
-    error_message : str
-    processed_at : datetime
+    id = Column('HaircutID', Integer, primary_key=True)
+    name = Column('Name', String)
+    description = Column('Description', String)
+    suitable_body_types = Column('SuitableBodyTypes', String)
+    suitable_colors = Column('SuitableColors', String)
+    suitable_hair_lengths = Column('SuitableHairLengths', String)
+
+    recommendations = relationship('Recommendations', back_populates='haircuts')
+
+
+class CatImages(Base):
+    __tablename__ = 'CatImages'
+
+    id = Column('CatImageID', Integer, primary_key=True, autoincrement=True)
+    cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
+    file_path = Column('FilePath', String, nullable=False)
+    file_size = Column('FileSize', String)
+    resolution = Column('Resolution', String)
+    format = Column('Format', String)
+    uploaded_at = Column('UploadedAt', DateTime, default=datetime.now)
+
+    cats = relationship('Cats', back_populates='cat_image')
+
+
+class CatCharacteristics(Base):
+    __tablename__ = 'CatCharacteristics'
+
+    id = Column('CharacteristicID', Integer, primary_key=True, autoincrement=True)
+    cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
+    color = Column('Color', String)
+    body_type = Column('BodyType', String)
+    hair_length = Column("HairLength", String)
+    confidence_level = Column("ConfidenceLevel", Float)
+
+    cats = relationship('Cats', back_populates='cats_characteristics')
+
+
+class Recommendations(Base):
+    __tablename__ = 'Recommendations'
+    
+    id = Column('RecommendationID', Integer, primary_key=True, autoincrement=True)
+    cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
+    haircut_id = Column('HaircutID', Integer, ForeignKey('Haircuts.HaircutID'), nullable=False)
+    is_no_haircut_required = Column('IsNoHaircutRequired', Boolean)
+    reason = Column('Reason', String)
+    created_at = Column('CreatedAt', DateTime)
+
+    cats = relationship('Cats', back_populates='recommendations')
+    haircuts = relationship('Haircuts', back_populates='recommendations')
+
+
+class ProcessingLogs(Base):
+    __tablename__ = "ProcessingLogs"
+
+    id = Column('LogID', primary_key=True, autoincrement=True)
+    cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
+    processing_time = Column('ProcessingTime', DateTime)
+    status = Column('Status', String)
+    error_message = Column('ErrorMessage', String)
+    processes_at = Column('ProcessedAt', DateTime)
+
+    cats = relationship('Cats', back_populates='processing_logs')
