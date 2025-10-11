@@ -11,7 +11,7 @@ class Cats(Base):
 
     id = Column('CatID', Integer, primary_key=True, autoincrement=True)
     created_at = Column('CreatedAt', DateTime, default=datetime.now)
-    
+
     processing_logs = relationship('ProcessingLogs', back_populates='cats')
     cat_images = relationship('CatImages', back_populates='cats')
     cat_characteristics = relationship('CatCharacteristics', back_populates='cats')
@@ -41,7 +41,7 @@ class CatImages(Base):
     format = Column('Format', String)
     uploaded_at = Column('UploadedAt', DateTime, default=datetime.now)
 
-    cats = relationship('Cats', back_populates='cat_image')
+    cats = relationship('Cats', back_populates='cat_images')
 
 
 class CatCharacteristics(Base):
@@ -54,7 +54,7 @@ class CatCharacteristics(Base):
     hair_length = Column("HairLength", String)
     confidence_level = Column("ConfidenceLevel", Float)
 
-    cats = relationship('Cats', back_populates='cats_characteristics')
+    cats = relationship('Cats', back_populates='cat_characteristics')
 
 
 class Recommendations(Base):
@@ -74,11 +74,11 @@ class Recommendations(Base):
 class ProcessingLogs(Base):
     __tablename__ = "ProcessingLogs"
 
-    id = Column('LogID', primary_key=True, autoincrement=True)
+    id = Column('LogID', Integer, primary_key=True, autoincrement=True)
     cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
-    processing_time = Column('ProcessingTime', DateTime)
+    processing_time = Column('ProcessingTime', Float) # Float - секунды, в бд нет правильной реализации таймеров
     status = Column('Status', String)
     error_message = Column('ErrorMessage', String)
-    processes_at = Column('ProcessedAt', DateTime)
+    processed_at = Column('ProcessedAt', DateTime)
 
     cats = relationship('Cats', back_populates='processing_logs')
