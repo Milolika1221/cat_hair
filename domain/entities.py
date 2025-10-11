@@ -1,4 +1,3 @@
-from typing import List
 from datetime import datetime, time
 from sqlalchemy import String, Integer, ARRAY, DateTime, Boolean, Column, JSON, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base

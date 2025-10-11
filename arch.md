@@ -1,29 +1,30 @@
-cat_grooming_api/
+# Просто небольшой гид по простенькой архитектуре
+
+cat_haircut/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                 # Точка входа
-│   ├── api/                    # Эндпоинты
-│   │   ├── __init__.py
-│   │   ├── dependencies.py     # Зависимости (DI)
-│   │   └── endpoints/          # Группы эндпоинтов
-│   │       ├── __init__.py
-│   │       ├── cats.py
-│   │       └── grooming.py
-│   ├── core/                   # Ядро приложения
+│   ├── main.py                 # Точка входа + DI контейнер
+│   ├── core/
 │   │   ├── __init__.py
 │   │   ├── config.py          # Конфигурация
-│   │   └── exceptions.py      # Кастомные исключения
-│   ├── domain/                # Доменный слой (бизнес-логика)
+│   │   └── dependencies.py    # Зависимости
+│   ├── domain/                # Ядро системы
 │   │   ├── __init__.py
-│   │   ├── models/            # Бизнес-модели
-│   │   ├── services/          # Бизнес-сервисы
-│   │   └── interfaces/        # Абстракции (интерфейсы)
-│   ├── infrastructure/        # Инфраструктурный слой
+│   │   ├── entities.py        # Все сущности в одном файле
+│   │   └── interfaces.py      # Все интерфейсы в одном файле
+│   ├── services/              # Бизнес-сервисы (application layer)
 │   │   ├── __init__.py
-│   │   ├── database/          # Работа с БД
-│   │   └── repositories/      # Реализации репозиториев
-│   └── presentation/          # Представление (DTO, схемы)
+│   │   ├── session_service.py
+│   │   ├── image_service.py
+│   │   └── recommendation_service.py
+│   ├── infrastructure/        # Внешние реализации
+│   │   ├── __init__.py
+│   │   ├── database.py        # Работа с БД
+│   │   ├── repositories.py    # Реализации репозиториев
+│   │   └── neural_client.py   # Клиент для ИИ сервиса
+│   └── api/
 │       ├── __init__.py
-│       └── schemas/           # Pydantic схемы
-├── tests/
-└── requirements.txt
+│       ├── schemas.py         # Все схемы в одном файле
+│       └── endpoints.py       # Все эндпоинты в одном файле
+├── requirements.txt
+└── README.md
