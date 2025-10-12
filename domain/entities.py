@@ -2,13 +2,13 @@ from datetime import datetime, time
 from sqlalchemy import String, Integer, ARRAY, DateTime, Boolean, Column, JSON, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-
-Base = declarative_base()
+from core.database import Base
 
 class Cats(Base):
     __tablename__ = "Cats"
 
     id = Column('CatID', Integer, primary_key=True, autoincrement=True)
+    user_id = Column('UserID', String, nullable=True) # идентификатор пользователя (в диаграммах не, а нада)
     created_at = Column('CreatedAt', DateTime, default=datetime.now)
 
     processing_logs = relationship('ProcessingLogs', back_populates='cats')
@@ -35,9 +35,9 @@ class CatImages(Base):
     id = Column('CatImageID', Integer, primary_key=True, autoincrement=True)
     cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
     file_path = Column('FilePath', String, nullable=False)
-    file_size = Column('FileSize', String)
-    resolution = Column('Resolution', String)
-    format = Column('Format', String)
+    file_size = Column('FileSize', String) # Размер в байтах
+    resolution = Column('Resolution', String) # Разрешение фото
+    format = Column('Format', String) # "JPEG", "PNG"
     uploaded_at = Column('UploadedAt', DateTime, default=datetime.now)
 
     cats = relationship('Cats', back_populates='cat_images')
@@ -76,7 +76,7 @@ class ProcessingLogs(Base):
     id = Column('LogID', Integer, primary_key=True, autoincrement=True)
     cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
     processing_time = Column('ProcessingTime', Float) # Float - секунды, в бд нет правильной реализации таймеров
-    status = Column('Status', String)
+    status = Column('Status', String) # "success", "error", "processing"
     error_message = Column('ErrorMessage', String)
     processed_at = Column('ProcessedAt', DateTime)
 
