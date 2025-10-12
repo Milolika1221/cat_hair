@@ -1,37 +1,91 @@
-from domain.entities import UserSession, CatCharacteristics
+from domain.entities import CatCharacteristics, CatImages, Cats, Haircuts, ProcessingLogs, Recommendations
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from sqlalchemy.ext.asyncio import AsyncSession 
 
-
-class ISessionRepository(ABC):
+# Контракты для работы с репозиториями (сущностями БД)
+class ICatsRepository(ABC):
     @abstractmethod
-    async def create_session(self, user_id: int) -> UserSession : pass
-
-    # Поиск сессии
+    async def create(self) -> Cats : pass 
+    
     @abstractmethod
-    async def get_session(self, session_id :int) -> Optional[UserSession] : pass
-
-    @abstractmethod
-    async def update_session(self, session: UserSession) -> UserSession : pass 
+    async def get_by_id(self, cat_id : int) -> Cats : pass
 
     @abstractmethod
-    async def delete_session(self, session_id : int) -> bool : pass
+    async def save(self, cat : Cats) -> Cats : pass
 
     @abstractmethod
-    async def add_image_to_session(self, session_id : int, image_data : dict) -> bool : pass
+    async def delete(self, cat_id : int) -> bool : pass
 
 
-
-class IRecommendationEngine(ABC):
+class ICatImagesRepository(ABC):
     @abstractmethod
-    async def get_recommendations(self, characteristics : CatCharacteristics) -> List[str] : pass
-
-
-
-class IImageProcessingService(ABC):
-    @abstractmethod
-    async def analyze_image(self, image : bytes) -> CatCharacteristics : pass
+    async def create(self) -> CatImages : pass
 
     @abstractmethod
-    async def validate_image(self, image : bytes) -> bool : pass
+    async def get_by_id(self, cat_id : int) -> CatImages : pass
+
+    @abstractmethod
+    async def save(self, cat_image : CatImages) -> CatImages : pass
+    
+    @abstractmethod
+    async def delete(self, image_id : int) -> bool : pass
+
+
+class ICatCharacteristicsRepository(ABC):
+    @abstractmethod
+    async def create(self) -> Cats : pass 
+    
+    @abstractmethod
+    async def get_by_id(self, characteristic_id : int) -> CatCharacteristics : pass
+
+    @abstractmethod
+    async def save(self, characteristic: CatCharacteristics) -> CatCharacteristics : pass
+
+    @abstractmethod
+    async def delete(self, characteristic_id : int) -> bool : pass
+
+class IRecommendationRepository(ABC):
+    @abstractmethod
+    async def create(self) -> Recommendations : pass 
+    
+    @abstractmethod
+    async def get_by_id(self, recommendation_id : int) -> Recommendations : pass
+
+    @abstractmethod
+    async def save(self, recommendation : Recommendations) -> Recommendations : pass
+
+    @abstractmethod
+    async def delete(self, recommendation_id : int) -> bool : pass
+
+
+class IHaircutsRepository(ABC):
+    @abstractmethod
+    async def create(self) -> Haircuts : pass 
+    
+    @abstractmethod
+    async def get_by_id(self, haircut_id : int) -> Haircuts : pass
+
+    @abstractmethod
+    async def save(self, haircut : Haircuts) -> Haircuts : pass
+
+    @abstractmethod
+    async def delete(self, haircut_id : int) -> bool : pass
+
+
+class IProcessingLogsRepository(ABC):
+    @abstractmethod
+    async def create(self) -> ProcessingLogs : pass 
+    
+    @abstractmethod
+    async def get_by_id(self, log_id : int) -> ProcessingLogs : pass
+
+    @abstractmethod
+    async def save(self, log : ProcessingLogs) -> ProcessingLogs : pass
+
+    @abstractmethod
+    async def delete(self, log_id : int) -> bool : pass
+
+
+# Контракты для сервисов (UserSession, RecommendationService, ImageProcessingService)
+
 
