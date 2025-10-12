@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import UploadFile
-from domain.dtos import AnalysisResult, SessionData, SessionResponse
+from domain.dtos import AnalysisResult, ImageData, ProcessingResult, RecommendationResult, SessionData, SessionResponse, ValidationResult
 from domain.entities import CatCharacteristics, CatImages, Cats, Haircuts, ProcessingLogs, Recommendations
 from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession 
@@ -91,21 +91,33 @@ class IProcessingLogsRepository(ABC):
 
 # Контракты для сервисов (UserSession, RecommendationService, ImageProcessingService)
 
-
 class IUserSessionService(ABC):
     @abstractmethod
-    async def create_session(self) -> SessionResponse: pass
+    async def create_session(self) -> str:  # возвращает session_id
+        pass
     
     @abstractmethod 
-    async def get_session(self) -> SessionData: pass
+    async def get_session(self, session_id: str) -> SessionData:
+        pass
 
     @abstractmethod
-    async def delete_session(self) -> bool : pass
+    async def add_images_to_session(self, session_id: str, images_data: List[ImageData]) -> bool:
+        pass
+
+    @abstractmethod
+    async def delete_session(self, session_id: str) -> bool:
+        pass
 
 class IImageProcessingService(ABC):
     @abstractmethod
-    async def process_images(session_id: int, images: List[UploadFile]) -> AnalysisResult: pass
+    async def process_images(self, session_id: str) -> ProcessingResult:
+        pass
+
+    @abstractmethod
+    async def validate_images(self, images_data: List[ImageData]) -> ValidationResult:
+        pass
 
 class IRecommendationService(ABC):
     @abstractmethod
-    async def get_recommendations(session_id: int) -> List[Recommendations]: pass
+    async def get_recommendations(self, cat_id: int) -> RecommendationResult:
+        pass
