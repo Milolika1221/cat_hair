@@ -1,13 +1,24 @@
-from sqlalchemy import create_engine
-from domain.entities import Base
-from core.config import settings
+import sys
+import os
+import asyncio
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-def create_database():
-    engine = create_engine(settings.DATABASE_URL)
-    Base.metadata.create_all(bind=engine)
+from domain.entities import Base
+from core.database import AsyncSessionLocal, engine
+
+async def create_database():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     print("Все таблицы созданы!")
 
-def drop_database():
-    engine = create_engine(settings.DATABASE_URL)
-    Base.metadata.drop_all(bind=engine)
-    print("Все таблицы удалены!")
+async def drop_database():
+    async with engine.begin() as conn :
+        await conn.run_sync(Base.metadata.drop_all)
+    print ('deleted')
+
+
+if __name__ == '__main__':
+    asyncio.run(create_database())
+
+# if __name__ == '__main__':
+#   asyncio.run(drop_database())
