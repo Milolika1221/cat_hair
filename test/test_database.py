@@ -16,11 +16,11 @@ async def test_connection() :
         print('успэх')
     
         async with AsyncSessionLocal() as session : 
-            cat = Cats(user_id='test_id_123')
+            cat = Cats()
             session.add(cat)
             await session.commit()
             await session.refresh(cat)
-            print(f'Гатова: ID={cat.id}, UserID={cat.user_id}')
+            print(f'Гатова: ID={cat.id}')
     except Exception as e:
         print(f'Ошибка: {e}')
 
