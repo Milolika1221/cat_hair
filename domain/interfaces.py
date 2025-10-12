@@ -89,3 +89,7 @@ class IProcessingLogsRepository(ABC):
 # Контракты для сервисов (UserSession, RecommendationService, ImageProcessingService)
 
 
+# class IUserSessionService(ABC):
+#     @abstractmethod
+#     def __init__(self):
+        
