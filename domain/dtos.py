@@ -56,3 +56,21 @@ class ProcessingError:
     details: Optional[str] = None
     suggestions: List[str] = None
 
+
+# Дополнительные DTO для специфичных нужд
+@dataclass
+class ValidationResult:
+    is_valid: bool
+    errors: List[ProcessingError]
+    warnings: List[str]
+
+@dataclass
+class NeuralNetworkRequest:
+    session_id: str
+    images: List[ImageData]
+    
+@dataclass
+class NeuralNetworkResponse:
+    session_id: str
+    analysis_result: AnalysisResult
+    processing_time_ms: int
