@@ -22,7 +22,7 @@ class ICatsRepository(ABC):
 
 class ICatImagesRepository(ABC):
     @abstractmethod
-    async def create(self) -> CatImages : pass
+    async def create(self, cat_id : int) -> CatImages : pass
 
     @abstractmethod
     async def get_by_id(self, cat_id : int) -> CatImages : pass
@@ -36,7 +36,7 @@ class ICatImagesRepository(ABC):
 
 class ICatCharacteristicsRepository(ABC):
     @abstractmethod
-    async def create(self) -> Cats : pass 
+    async def create(self, cat_id : int) -> CatCharacteristics : pass 
     
     @abstractmethod
     async def get_by_id(self, characteristic_id : int) -> CatCharacteristics : pass
@@ -49,7 +49,7 @@ class ICatCharacteristicsRepository(ABC):
 
 class IRecommendationRepository(ABC):
     @abstractmethod
-    async def create(self) -> Recommendations : pass 
+    async def create(self, cat_id : int) -> Recommendations : pass 
     
     @abstractmethod
     async def get_by_id(self, recommendation_id : int) -> Recommendations : pass
@@ -77,7 +77,7 @@ class IHaircutsRepository(ABC):
 
 class IProcessingLogsRepository(ABC):
     @abstractmethod
-    async def create(self) -> ProcessingLogs : pass 
+    async def create(self, cat_id : int) -> ProcessingLogs : pass 
     
     @abstractmethod
     async def get_by_id(self, log_id : int) -> ProcessingLogs : pass
