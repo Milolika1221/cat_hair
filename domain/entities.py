@@ -8,7 +8,6 @@ class Cats(Base):
     __tablename__ = "Cats"
 
     id = Column('CatID', Integer, primary_key=True, autoincrement=True)
-    user_id = Column('UserID', String, nullable=True) # идентификатор пользователя (в диаграммах не, а нада)
     created_at = Column('CreatedAt', DateTime, default=datetime.now)
 
     processing_logs = relationship('ProcessingLogs', back_populates='cats')
@@ -35,7 +34,7 @@ class CatImages(Base):
     id = Column('CatImageID', Integer, primary_key=True, autoincrement=True)
     cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
     file_path = Column('FilePath', String, nullable=False)
-    file_size = Column('FileSize', String) # Размер в байтах
+    file_size = Column('FileSize', Integer) # Размер в байтах
     resolution = Column('Resolution', String) # Разрешение фото
     format = Column('Format', String) # "JPEG", "PNG"
     uploaded_at = Column('UploadedAt', DateTime, default=datetime.now)
