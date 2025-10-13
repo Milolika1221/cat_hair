@@ -194,6 +194,14 @@ class HaircutsRepository(IHaircutsRepository):
         haircuts = result.scalars().all()
         return haircuts
 
+    async def get_by_criteria(self, hair_length: str, colors: str) -> List[Haircuts]:
+        result = await self.session.execute(
+            select(Haircuts).where(
+                Haircuts.suitable_hair_lengths.contains([hair_length]),
+                Haircuts.suitable_color.contains([colors])
+            )
+        )
+
     async def delete(self, haircut_id):
         haircut = await self.sessions.get(Haircuts, haircut_id)
         if not haircut: return False
