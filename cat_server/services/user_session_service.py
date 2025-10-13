@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 from services.dtos import ImageData, SessionData
-from domain.interfaces import IUserSessionService, ICatsRepository as IUserSessionRepository
+from domain.interfaces import IUserSessionService
 import uuid
 
 class UserSessionService(IUserSessionService):

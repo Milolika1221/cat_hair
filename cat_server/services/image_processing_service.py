@@ -6,7 +6,7 @@ import io
 import os
 
 
-from infrastructure.neutral_client import NeuralNetworkClient
+from cat_server.infrastructure.neural_client import NeuralNetworkClient
 from services.dtos import ImageData, NeuralNetworkRequest, ProcessedImageResponse, ProcessingError, ProcessingResult, ValidationResult
 from domain.interfaces import ICatCharacteristicsRepository, ICatImagesRepository, ICatsRepository, IImageProcessingService, IUserSessionService
 
