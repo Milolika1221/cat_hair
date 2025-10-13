@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import List
 from fastapi import UploadFile
-from domain.dtos import AnalysisResult, ImageData, ProcessingResult, RecommendationResult, SessionData, SessionResponse, ValidationResult
+from services.dtos import AnalysisResult, ImageData, ProcessingResult, RecommendationResult, SessionData, SessionResponse, ValidationResult
 from domain.entities import CatCharacteristics, CatImages, Cats, Haircuts, ProcessingLogs, Recommendations
 from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession 
@@ -8,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Контракты для работы с репозиториями (сущностями БД)
 class ICatsRepository(ABC):
     @abstractmethod
-    async def create(self) -> Cats : pass 
+    async def create(self, created_at : datetime) -> Cats : pass 
     
     @abstractmethod
     async def get_by_id(self, cat_id : int) -> Cats : pass
@@ -22,7 +23,14 @@ class ICatsRepository(ABC):
 
 class ICatImagesRepository(ABC):
     @abstractmethod
-    async def create(self, cat_id : int) -> CatImages : pass
+    async def create(self,
+                    cat_id: int,
+                    filename: str,
+                    file_path: str,
+                    file_size: int,
+                    resolution: str,
+                    format: str) -> CatImages:
+        pass
 
     @abstractmethod
     async def get_by_id(self, cat_id : int) -> CatImages : pass
@@ -36,11 +44,21 @@ class ICatImagesRepository(ABC):
 
 class ICatCharacteristicsRepository(ABC):
     @abstractmethod
-    async def create(self, cat_id : int) -> CatCharacteristics : pass 
+    async def create(self, 
+                    cat_id: int,
+                    color: str,
+                    body_type: str, 
+                    hair_length: str,
+                    confidence_level: float,
+                    analyzed_at: datetime) -> CatCharacteristics:
+        pass
     
     @abstractmethod
     async def get_by_id(self, characteristic_id : int) -> CatCharacteristics : pass
-
+    
+    @abstractmethod
+    async def get_by_cat_id(self, cat_id : int) -> CatCharacteristics : pass
+    
     @abstractmethod
     async def save(self, characteristic: CatCharacteristics) -> CatCharacteristics : pass
 
@@ -49,10 +67,14 @@ class ICatCharacteristicsRepository(ABC):
 
 class IRecommendationRepository(ABC):
     @abstractmethod
-    async def create(self, cat_id : int) -> Recommendations : pass 
+    async def create(self, cat_id : int, haircut_id : int,
+                    is_no_haircut_required : bool, reason : str, created_at : datetime) -> Recommendations : pass 
     
     @abstractmethod
     async def get_by_id(self, recommendation_id : int) -> Recommendations : pass
+
+    @abstractmethod
+    async def get_by_cat_id(self, cat_id : int) -> Recommendations : pass
 
     @abstractmethod
     async def save(self, recommendation : Recommendations) -> Recommendations : pass
@@ -63,8 +85,15 @@ class IRecommendationRepository(ABC):
 
 class IHaircutsRepository(ABC):
     @abstractmethod
-    async def create(self) -> Haircuts : pass 
+    async def create(self, name : str, description : str,
+                    suitable_colors : str, suitable_hair_length) -> Haircuts : pass 
     
+    @abstractmethod
+    async def get_all(self) -> List[Haircuts]: pass 
+
+    @abstractmethod
+    async def get_all_by_recommendations(self, cat : int) -> List[Haircuts] : pass
+
     @abstractmethod
     async def get_by_id(self, haircut_id : int) -> Haircuts : pass
 
@@ -77,10 +106,14 @@ class IHaircutsRepository(ABC):
 
 class IProcessingLogsRepository(ABC):
     @abstractmethod
-    async def create(self, cat_id : int) -> ProcessingLogs : pass 
-    
+    async def create(self, cat_id : int, processing_time : float, 
+                    status : str, error_message : str, processed_at) -> ProcessingLogs : pass 
+
     @abstractmethod
     async def get_by_id(self, log_id : int) -> ProcessingLogs : pass
+
+    @abstractmethod
+    async def get_by_cat_id(self, cat_id : int) -> Recommendations : pass
 
     @abstractmethod
     async def save(self, log : ProcessingLogs) -> ProcessingLogs : pass
@@ -90,7 +123,6 @@ class IProcessingLogsRepository(ABC):
 
 
 # Контракты для сервисов (UserSession, RecommendationService, ImageProcessingService)
-
 class IUserSessionService(ABC):
     @abstractmethod
     async def create_session(self) -> str:  # возвращает session_id
