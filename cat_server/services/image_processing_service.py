@@ -6,8 +6,8 @@ import io
 import os
 
 
-from infrastructure.neutral_client import NeutralNetworkClient
-from services.dtos import ImageData, NeutralNetworkRequest, ProcessedImageResponse, ProcessingError, ProcessingResult, ValidationResult
+from infrastructure.neutral_client import NeuralNetworkClient
+from services.dtos import ImageData, NeuralNetworkRequest, ProcessedImageResponse, ProcessingError, ProcessingResult, ValidationResult
 from domain.interfaces import ICatCharacteristicsRepository, ICatImagesRepository, ICatsRepository, IImageProcessingService, IUserSessionService
 
 
@@ -18,7 +18,7 @@ class ImageProcessingService(IImageProcessingService):
         cats_repository: ICatsRepository,
         images_repository: ICatImagesRepository,
         characteristics_repository: ICatCharacteristicsRepository,
-        neural_client: NeutralNetworkClient,
+        neural_client: NeuralNetworkClient,
         upload_dir: str = "uploads"
     ):
         self.user_session_service = user_session_service
@@ -47,7 +47,7 @@ class ImageProcessingService(IImageProcessingService):
                 image_info = await self._save_original_image(cat.id, image_data)
                 orig_images_info.append(image_info)
             
-            neutral_request = NeutralNetworkRequest(
+            neutral_request = NeuralNetworkRequest(
                 session_id=session.session_id,
                 cat_id=cat.id,
                 images=session.images,

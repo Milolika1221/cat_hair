@@ -110,13 +110,13 @@ class ValidationResult:
 
 # GET/POST из веб-сервиса ИИ
 @dataclass
-class NeutralNetworkRequest:
+class NeuralNetworkRequest:
     session_id: str
     cat_id : int
     images: List[ImageData]
     processing_type: str = "analysis"  # "analysis", "enhancement", "segmentation"
 @dataclass
-class NeutralNetworkResponse:
+class NeuralNetworkResponse:
     analysis_result: AnalysisResult
     processed_images: List[ImageData]  # изменённые изображения
     processing_time_ms: int
