@@ -21,7 +21,7 @@ class Haircuts(Base):
     id = Column('HaircutID', Integer, primary_key=True)
     name = Column('Name', String)
     description = Column('Description', String)
-    suitable_body_types = Column('SuitableBodyTypes', String)
+    # suitable_body_types = Column('SuitableBodyTypes', String)
     suitable_colors = Column('SuitableColors', String)
     suitable_hair_lengths = Column('SuitableHairLengths', String)
 
@@ -33,6 +33,7 @@ class CatImages(Base):
 
     id = Column('CatImageID', Integer, primary_key=True, autoincrement=True)
     cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
+    file_name = Column("FileName", String)
     file_path = Column('FilePath', String, nullable=False)
     file_size = Column('FileSize', Integer) # Размер в байтах
     resolution = Column('Resolution', String) # Разрешение фото
