@@ -1,11 +1,11 @@
 from .repositories import (
-    CatsRepository, ImagesRepository, CharacteristicsRepository,
+    CatsRepository, CatImagesRepository, CatCharacteristicsRepository,
     HaircutsRepository, RecommendationsRepository
 )
-from .neutral_client import NeuralNetworkClient
+from .neural_client import NeuralNetworkClient
 
 __all__ = [
-    "CatsRepository", "ImagesRepository", "CharacteristicsRepository",
+    "CatsRepository", "CatImagesRepository", "CatCharacteristicsRepository",
     "HaircutsRepository", "RecommendationsRepository",
     "NeuralNetworkClient"
 ]
