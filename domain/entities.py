@@ -15,19 +15,6 @@ class Cats(Base):
     cat_characteristics = relationship('CatCharacteristics', back_populates='cats')
     recommendations = relationship('Recommendations', back_populates='cats')
 
-class Haircuts(Base):
-    __tablename__ = 'Haircuts'
-
-    id = Column('HaircutID', Integer, primary_key=True)
-    name = Column('Name', String)
-    description = Column('Description', String)
-    # suitable_body_types = Column('SuitableBodyTypes', String)
-    suitable_colors = Column('SuitableColors', String)
-    suitable_hair_lengths = Column('SuitableHairLengths', String)
-
-    recommendations = relationship('Recommendations', back_populates='haircuts')
-
-
 class CatImages(Base):
     __tablename__ = 'CatImages'
 
@@ -42,7 +29,6 @@ class CatImages(Base):
 
     cats = relationship('Cats', back_populates='cat_images')
 
-
 class CatCharacteristics(Base):
     __tablename__ = 'CatCharacteristics'
 
@@ -54,7 +40,6 @@ class CatCharacteristics(Base):
     confidence_level = Column("ConfidenceLevel", Float)
 
     cats = relationship('Cats', back_populates='cat_characteristics')
-
 
 class Recommendations(Base):
     __tablename__ = 'Recommendations'
@@ -68,7 +53,17 @@ class Recommendations(Base):
 
     cats = relationship('Cats', back_populates='recommendations')
     haircuts = relationship('Haircuts', back_populates='recommendations')
+class Haircuts(Base):
+    __tablename__ = 'Haircuts'
 
+    id = Column('HaircutID', Integer, primary_key=True)
+    name = Column('Name', String)
+    description = Column('Description', String)
+    # suitable_body_types = Column('SuitableBodyTypes', String)
+    suitable_colors = Column('SuitableColors', String)
+    suitable_hair_lengths = Column('SuitableHairLengths', String)
+
+    recommendations = relationship('Recommendations', back_populates='haircuts')
 
 class ProcessingLogs(Base):
     __tablename__ = "ProcessingLogs"
