@@ -31,7 +31,7 @@ class ProcessingResult:
     session_id: str
     cat_id: int
     characteristics: AnalysisResult
-    processing_time_ms: int
+    processing_time: int
     status: str
 
 @dataclass
@@ -46,7 +46,7 @@ class RecommendationResult:
     cat_id: int
     recommendations: List[HaircutRecommendation]
     processing_steps: List[str]
-    total_processing_time_ms: int
+    total_processing_time: int
 
 @dataclass
 class ProcessingError:
@@ -62,7 +62,6 @@ class ProcessingError:
 class ValidationResult:
     is_valid: bool
     errors: List[ProcessingError]
-    warnings: List[str]
 
 @dataclass
 class NeuralNetworkRequest:
