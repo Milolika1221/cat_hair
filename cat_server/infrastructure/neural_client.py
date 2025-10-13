@@ -5,15 +5,15 @@ import aiohttp
 import json
 from typing import Dict, List, Optional, Any
 
-from services.dtos import AnalysisResult, ImageData, NeutralNetworkRequest, NeutralNetworkResponse, ProcessingError
+from services.dtos import AnalysisResult, ImageData, NeuralNetworkRequest, NeuralNetworkResponse, ProcessingError
 
 
-class NeutralNetworkClient:
+class NeuralNetworkClient:
     def __init__(self, base_url : str, timeout : int = 60):
         self.base_url - base_url # ai_localhost
         self.timeout = timeout
     
-    async def analyze_and_process_image(self, request : NeutralNetworkRequest) -> NeutralNetworkResponse : 
+    async def analyze_and_process_image(self, request : NeuralNetworkRequest) -> NeuralNetworkResponse : 
         async with aiohttp.ClientSession() as session : 
             form_data = aiohttp.FormData()
             for image in request.images:
@@ -67,7 +67,7 @@ class NeutralNetworkClient:
                     suggestions=["Проверьте интернет-соединение", "Проверьте URL API"]
                 )
 
-    def _parse_success_response(self, data: Dict[str, Any]) -> NeutralNetworkResponse:
+    def _parse_success_response(self, data: Dict[str, Any]) -> NeuralNetworkResponse:
         """"""
         analysis_data = data.get('analysis_result', {})
         analysis_result = AnalysisResult(
@@ -92,7 +92,7 @@ class NeutralNetworkClient:
                 is_processed=True
             ))
         
-        return NeutralNetworkResponse(
+        return NeuralNetworkResponse(
             analysis_result=analysis_result,
             processed_images=processed_images,
             processing_time_ms=data.get('processing_time_ms', 0),
