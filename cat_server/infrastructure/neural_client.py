@@ -5,7 +5,7 @@ import aiohttp
 import json
 from typing import Dict, List, Optional, Any
 
-from services.dtos import AnalysisResult, ImageData, NeuralNetworkRequest, NeuralNetworkResponse, ProcessingError
+from domain.dtos import AnalysisResult, ImageData, NeuralNetworkRequest, NeuralNetworkResponse, ProcessingError
 
 
 class NeuralNetworkClient:

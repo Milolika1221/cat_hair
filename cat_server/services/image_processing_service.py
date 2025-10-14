@@ -4,12 +4,9 @@ from PIL import Image
 import aiofiles
 import io
 import os
-
-
-from cat_server.infrastructure.neural_client import NeuralNetworkClient
-from services.dtos import ImageData, NeuralNetworkRequest, ProcessedImageResponse, ProcessingError, ProcessingResult, ValidationResult
+from infrastructure.neural_client import NeuralNetworkClient
+from domain.dtos import ImageData, NeuralNetworkRequest, ProcessedImageResponse, ProcessingError, ProcessingResult, ValidationResult
 from domain.interfaces import ICatCharacteristicsRepository, ICatImagesRepository, ICatsRepository, IImageProcessingService, IUserSessionService
-
 
 class ImageProcessingService(IImageProcessingService):
     def __init__(

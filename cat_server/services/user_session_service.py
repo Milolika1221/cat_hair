@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import List
-from services.dtos import ImageData, SessionData
 from domain.interfaces import IUserSessionService
 import uuid
+from domain.dtos import SessionData, ImageData
+
 
 class UserSessionService(IUserSessionService):
     def __init__(self):

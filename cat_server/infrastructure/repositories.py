@@ -1,9 +1,10 @@
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from domain.interfaces import * 
-from domain.entities import CatImages, Cats
+from domain.interfaces import ICatsRepository, ICatImagesRepository, ICatCharacteristicsRepository, IRecommendationRepository, IProcessingLogsRepository, IHaircutsRepository
+from domain.entities import CatImages, Cats, CatCharacteristics, Recommendations, ProcessingLogs, Haircuts
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from typing import List
+import datetime 
 
 class CatsRepository(ICatsRepository):
     def __init__(self, session : AsyncSession):

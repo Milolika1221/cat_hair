@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List
-from services.dtos import AnalysisResult, HaircutRecommendation, ProcessingError, RecommendationResult, ScoredHaircut
+from domain.dtos import AnalysisResult, HaircutRecommendation, ProcessingError, RecommendationResult, ScoredHaircut
 from domain.interfaces import ICatCharacteristicsRepository, IHaircutsRepository, IRecommendationRepository, IRecommendationService
 
 

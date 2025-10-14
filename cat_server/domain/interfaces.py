@@ -1,7 +1,16 @@
 from datetime import datetime
 from typing import List
 from fastapi import UploadFile
-from services.dtos import AnalysisResult, ImageData, ProcessingResult, RecommendationResult, SessionData, SessionResponse, ValidationResult
+from domain.dtos import (
+    ImageData, 
+    ProcessingResult, 
+    RecommendationResult, 
+    SessionData, 
+    ValidationResult,
+    AnalysisResult,
+    ProcessingError
+)
+
 from domain.entities import CatCharacteristics, CatImages, Cats, Haircuts, ProcessingLogs, Recommendations
 from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession 
@@ -153,3 +162,5 @@ class IRecommendationService(ABC):
     @abstractmethod
     async def get_recommendations(self, cat_id: int) -> RecommendationResult:
         pass
+
+

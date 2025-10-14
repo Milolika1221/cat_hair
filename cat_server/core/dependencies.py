@@ -5,14 +5,13 @@ from infrastructure.repositories import (
     CatImagesRepository, 
     CatCharacteristicsRepository,
     HaircutsRepository,
-    RecommendationsRepository
+    RecommendationRepository
 )
 from services.user_session_service import UserSessionService
 from services.image_processing_service import ImageProcessingService
 from services.recommendation_service import RecommendationService
 from core.database import AsyncSessionLocal
 from core.config import settings
-
 
 
 async def get_db_session():
@@ -44,11 +43,11 @@ def get_image_processing_service(
         )
 
 def get_recommendation_service(
-    db_session = Depends(get_db_session)
-) -> RecommendationService:
+        db_session = Depends(get_db_session)
+    ) -> RecommendationService:
     characteristics_repo = CatCharacteristicsRepository(db_session)
     haircuts_repo = HaircutsRepository(db_session)
-    recommendations_repo = RecommendationsRepository(db_session)
+    recommendations_repo = RecommendationRepository(db_session)
     
     return RecommendationService(
         characteristics_repository=characteristics_repo,
