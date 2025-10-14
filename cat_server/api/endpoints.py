@@ -2,9 +2,8 @@ from datetime import datetime
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from typing import List
-import uuid
 
-from cat_server.domain.dtos import ImageData, ProcessedImageResponse
+from domain.dtos import ImageData, ImageProcessingResponse
 from services.user_session_service import UserSessionService
 from services.image_processing_service import ImageProcessingService
 from services.recommendation_service import RecommendationService

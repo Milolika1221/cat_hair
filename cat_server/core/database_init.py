@@ -3,7 +3,8 @@ import os
 import asyncio
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.database import engine, Base
+from core.base import Base
+from core.database import engine
 
 async def create_database():
     async with engine.begin() as conn:

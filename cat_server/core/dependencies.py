@@ -1,12 +1,5 @@
 from fastapi import Depends
-from infrastructure.neural_client import NeuralNetworkClient
-from infrastructure.repositories import (
-    CatsRepository, 
-    CatImagesRepository, 
-    CatCharacteristicsRepository,
-    HaircutsRepository,
-    RecommendationRepository
-)
+from infrastructure.repositories import CatsRepository, CatImagesRepository, CatCharacteristicsRepository, HaircutsRepository,RecommendationRepository
 from services.user_session_service import UserSessionService
 from services.image_processing_service import ImageProcessingService
 from services.recommendation_service import RecommendationService
@@ -28,6 +21,7 @@ def get_image_processing_service(
         user_session : UserSessionService = Depends(get_user_session_service),
         db_session = Depends(get_db_session)
     ) -> ImageProcessingService:
+    from infrastructure.neural_client import NeuralNetworkClient
     cats_repo = CatsRepository(db_session)
     images_repo = CatImagesRepository(db_session)
     characteristic_repo = CatCharacteristicsRepository(db_session)

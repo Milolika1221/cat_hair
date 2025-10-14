@@ -1,12 +1,19 @@
-from .entities import Base, Cats, CatImages, CatCharacteristics, Haircuts, Recommendations, ProcessingLogs
+from .entities import Cats, CatImages, CatCharacteristics, Haircuts,Recommendations
+from .interfaces import IUserSessionService,IImageProcessingService,IRecommendationService,ICatsRepository,ICatCharacteristicsRepository,ICatImagesRepository,IHaircutsRepository, IRecommendationRepository
 
-from .interfaces import ICatsRepository, ICatImagesRepository, ICatCharacteristicsRepository, IHaircutsRepository, IRecommendationRepository, IUserSessionService, IImageProcessingService, IRecommendationService
 
-
-# __all__ = [
-#     "Base", "Cats", "CatImages", "CatCharacteristics",
-#     "Haircuts", "Recommendations", "ProcessingLogs",
-#     "ICatsRepository", "ICatImagesRepository", "ICatCharacteristicsRepository",
-#     "IHaircutsRepository", "IRecommendationRepository", 
-#     "IUserSessionService", "IImageProcessingService", "IRecommendationService"
-# ]
+__all__ = [
+    'Cats',
+    'CatImages',
+    'CatCharacteristics',
+    'Haircuts', 
+    'Recommendations',
+    'IUserSessionService',
+    'IImageProcessingService',
+    'IRecommendationService',
+    'ICatsRepository',
+    'ICatCharacteristicsRepository',
+    'ICatImagesRepository',
+    'IHaircutsRepository',
+    'IRecommendationRepository'
+]

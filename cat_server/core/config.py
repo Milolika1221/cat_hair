@@ -1,10 +1,10 @@
 from pydantic_settings import BaseSettings
 
-class Settings(BaseSettings): # класс настроек будет меняться 
+class Settings(BaseSettings): 
     DATABASE_URL: str =\
     "postgresql+asyncpg://postgres:123456789@localhost:5432/cat_haircut" # 
 
-    NEUTRAL_API_URL: str = "https://neutral-api.example.com"
+    NEUTRAL_API_URL: str = "https://localhost:8050"
     UPLOAD_DIR: str = "uploads"
     NEURAL_API_TIMEOUT: int = 60
     

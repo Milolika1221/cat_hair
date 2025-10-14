@@ -5,7 +5,7 @@ import aiofiles
 import io
 import os
 from infrastructure.neural_client import NeuralNetworkClient
-from domain.dtos import ImageData, NeuralNetworkRequest, ProcessedImageResponse, ProcessingError, ProcessingResult, ValidationResult
+from domain.dtos import ImageData, NeuralNetworkRequest, ImageProcessingResponse, ProcessingError, ProcessingResult, ValidationResult
 from domain.interfaces import ICatCharacteristicsRepository, ICatImagesRepository, ICatsRepository, IImageProcessingService, IUserSessionService
 
 class ImageProcessingService(IImageProcessingService):
@@ -68,7 +68,7 @@ class ImageProcessingService(IImageProcessingService):
             
             # ответ пользователю
             processed_responses = [
-                ProcessedImageResponse.from_image_data(img, 'enhanced')
+                ImageProcessingResponse.from_image_data(img, 'enhanced')
                 for img in neutral_response.processed_images
             ] # фоты после обработки 
 

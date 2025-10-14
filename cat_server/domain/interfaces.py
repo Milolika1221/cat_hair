@@ -1,19 +1,8 @@
 from datetime import datetime
 from typing import List
-from fastapi import UploadFile
-from domain.dtos import (
-    ImageData, 
-    ProcessingResult, 
-    RecommendationResult, 
-    SessionData, 
-    ValidationResult,
-    AnalysisResult,
-    ProcessingError
-)
-
-from domain.entities import CatCharacteristics, CatImages, Cats, Haircuts, ProcessingLogs, Recommendations
+from domain.dtos import ImageData, ProcessingResult, RecommendationResult, SessionData, ValidationResult
+from domain.entities import Cats, CatCharacteristics, CatImages, Recommendations, Haircuts, ProcessingLogs
 from abc import ABC, abstractmethod
-from sqlalchemy.ext.asyncio import AsyncSession 
 
 # Контракты для работы с репозиториями (сущностями БД)
 class ICatsRepository(ABC):

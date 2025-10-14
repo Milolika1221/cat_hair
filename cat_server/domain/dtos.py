@@ -15,7 +15,7 @@ class ImageData:
     is_processed: bool = False  # False - исходное, True - обработанное
 
 @dataclass
-class ProcessedImageResponse:
+class ImageProcessingResponse:
     filename: str
     data: str           # base64 
     format: str
@@ -80,7 +80,7 @@ class ProcessingResult:
     session_id: str
     cat_id: int
     characteristics: AnalysisResult
-    processed_images: List[ProcessedImageResponse]  # Для ответа пользователю
+    processed_images: List[ImageProcessingResponse]  # Для ответа пользователю
     processing_time_ms: int
     status: str
     error: Optional[ProcessingError] = None
@@ -90,7 +90,7 @@ class ProcessingResult:
     session_id: str
     cat_id: int
     characteristics: AnalysisResult
-    processed_images : List[ProcessedImageResponse]
+    processed_images : List[ImageProcessingResponse]
     processing_time: int
     status: str
     error: Optional[ProcessingError] = None

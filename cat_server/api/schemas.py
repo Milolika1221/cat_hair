@@ -7,7 +7,7 @@ class SessionCreateResponse(BaseModel):
     session_id: str
     
 @dataclass
-class ImageUploadRequest(BaseModel):
+class ImageUploadResponse(BaseModel):
     session_id: str
     cat_id : int
     upload_timestamp : float # секунды

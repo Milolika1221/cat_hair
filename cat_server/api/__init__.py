@@ -1,8 +1,6 @@
 from .endpoints import router
-from .schemas import (
-    SessionCreateResponse, ImageUploadResponse, 
-    ProcessImagesResponse, RecommendationResponse
-)
+from .schemas import SessionCreateResponse, ImageUploadResponse, ProcessImagesResponse, RecommendationResponse
+
 
 __all__ = [
     "router",
