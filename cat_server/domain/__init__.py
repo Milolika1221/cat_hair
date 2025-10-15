@@ -1,19 +1,31 @@
 from .entities import Cats, CatImages, CatCharacteristics, Haircuts,Recommendations
-from .interfaces import IUserSessionService,IImageProcessingService,IRecommendationService,ICatsRepository,ICatCharacteristicsRepository,ICatImagesRepository,IHaircutsRepository, IRecommendationRepository
-
+from .interfaces import IUserSessionService,IImageProcessingService,IRecommendationService
+from .dtos import (ImageData, ImageProcessingResponse,
+                   AnalysisResult, HaircutRecommendation,
+                   RecommendationResult, ScoredHaircut,
+                   ProcessingError, ProcessingResult,
+                   SessionData, ValidationResult,
+                   NeuralNetworkRequest, NeuralNetworkResponse)
 
 __all__ = [
     'Cats',
     'CatImages',
     'CatCharacteristics',
-    'Haircuts', 
+    'Haircuts',
     'Recommendations',
     'IUserSessionService',
     'IImageProcessingService',
     'IRecommendationService',
-    'ICatsRepository',
-    'ICatCharacteristicsRepository',
-    'ICatImagesRepository',
-    'IHaircutsRepository',
-    'IRecommendationRepository'
+    'ImageData',
+    'ImageProcessingResponse',
+    'AnalysisResult',
+    'HaircutRecommendation',
+    'RecommendationResult',
+    'ScoredHaircut',
+    'ProcessingError',
+    'ProcessingResult',
+    'SessionData',
+    'ValidationResult',
+    'NeuralNetworkRequest',
+    'NeuralNetworkResponse'
 ]

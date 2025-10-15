@@ -1,5 +1,5 @@
 from .neural_client import NeuralNetworkClient
-from .repositories import CatsRepository, CatImagesRepository, CatCharacteristicsRepository, HaircutsRepository, RecommendationRepository
+from .repositories import CatsRepository, CatImagesRepository, CatCharacteristicsRepository, HaircutsRepository, RecommendationRepository, ICatsRepository,ICatCharacteristicsRepository,ICatImagesRepository,IHaircutsRepository, IRecommendationRepository
 
 
 __all__ = [
@@ -8,5 +8,10 @@ __all__ = [
     'CatImagesRepository',
     'CatCharacteristicsRepository', 
     'HaircutsRepository',
-    'RecommendationRepository'
+    'RecommendationRepository',
+    'ICatsRepository',
+    'ICatCharacteristicsRepository',
+    'ICatImagesRepository',
+    'IHaircutsRepository',
+    'IRecommendationRepository'
 ]
