@@ -1,9 +1,7 @@
-# Проверка подключения к БД
 import asyncio
 
-from cat_server.core.database import AsyncSessionLocal, test_engine, engine
-from cat_server.domain.entities import Cats, Base, Recommendations
-# from cat_server.infrastructure.repositories import IRecommendationRepository, RecommendationRepository
+from cat_server.core.database import AsyncSessionLocal, engine
+from cat_server.domain.entities import Cats, Base
 
 
 async def test_connection() :
