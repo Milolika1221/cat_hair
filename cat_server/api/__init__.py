@@ -1,11 +1,19 @@
-from .endpoints import router
+# from .endpoints import router
 from .schemas import (
-    SessionCreateResponse, ImageUploadResponse, 
-    ProcessImagesResponse, RecommendationResponse
+    ImageData, SessionCreateResponse, ImageUploadResponse,
+    SessionData, ValidationResult, AnalysisResult,
+    HaircutRecommendation, RecommendationResult,
+    ScoredHaircut, ProcessingError, ProcessingResult, ImageProcessingResponse,
+    NeuralNetworkResponse, NeuralNetworkRequest
 )
 
+
 __all__ = [
-    "router",
+    # "router",
     "SessionCreateResponse", "ImageUploadResponse",
-    "ProcessImagesResponse", "RecommendationResponse"
+    "SessionData", "ValidationResult", "AnalysisResult",
+    "HaircutRecommendation", "RecommendationResult",
+    "ScoredHaircut", "ProcessingError", "ProcessingResult",
+    "ImageProcessingResponse", "NeuralNetworkResponse", "NeuralNetworkRequest",
+    "ImageData"
 ]

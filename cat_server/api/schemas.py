@@ -1,24 +1,37 @@
-from dataclasses import dataclass
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, Field
+from cat_server.domain.dto import *
 
-@dataclass
+#  API Request Schemas
+class ImageUploadRequest(BaseModel):
+    cat_id: Optional[int] = Field(None, description="ID кота. Если 0 или None — создать нового.")
+
+class ProcessCatRequest(BaseModel):
+    processing_type: str = Field("analysis", description="Тип обработки: analysis, enhancement, segmentation")
+
+# API Response Schema
+class ImageUploadResponse(BaseModel):
+    session_id : str
+    cat_id: int
+    filename: str
+    upload_timestamp: float  # секунды
+
+class ProcessCatResponse(BaseModel):
+    cat_id: int
+    status: str  # "processing", "completed", "error"
+
+class CatProcessingStatusResponse(BaseModel):
+    cat_id: int
+    status: str  # "pending", "processing", "completed", "error"
+    error_message: Optional[str] = None
+    updated_at: datetime
+
+class CatRecommendationsResponse(BaseModel):
+    cat_id: int
+    recommendations: List['HaircutRecommendation']
+    characteristics: Optional['AnalysisResult'] = None
+    processed_images: Optional[List['ImageProcessingResponse']] = None
+
 class SessionCreateResponse(BaseModel):
     session_id: str
-    
-@dataclass
-class ImageUploadRequest(BaseModel):
-    session_id: str
-    cat_id : int
-    upload_timestamp : float # секунды
-    image_count : int
+    status: str = "created"
 
-@dataclass
-class ProcessImagesResponse(BaseModel):
-    cat_id: int
-    status: str
-
-@dataclass
-class RecommendationResponse(BaseModel):
-    haircuts: List[str]
-    reasoning: str

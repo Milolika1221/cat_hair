@@ -1,11 +1,15 @@
-from .repositories import (
-    CatsRepository, CatImagesRepository, CatCharacteristicsRepository,
-    HaircutsRepository, RecommendationsRepository
-)
-from .neural_client import NeuralNetworkClient
+from .repositories import CatsRepository, CatImagesRepository, CatCharacteristicsRepository, HaircutsRepository, RecommendationRepository, ICatsRepository,ICatCharacteristicsRepository,ICatImagesRepository,IHaircutsRepository, IRecommendationRepository
+
 
 __all__ = [
-    "CatsRepository", "CatImagesRepository", "CatCharacteristicsRepository",
-    "HaircutsRepository", "RecommendationsRepository",
-    "NeuralNetworkClient"
+    'CatsRepository',
+    'CatImagesRepository',
+    'CatCharacteristicsRepository', 
+    'HaircutsRepository',
+    'RecommendationRepository',
+    'ICatsRepository',
+    'ICatCharacteristicsRepository',
+    'ICatImagesRepository',
+    'IHaircutsRepository',
+    'IRecommendationRepository'
 ]
