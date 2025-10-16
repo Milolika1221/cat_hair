@@ -1,16 +1,20 @@
+import asyncio
 from datetime import datetime
 from typing import List
-from domain.interfaces import IUserSessionService
 import uuid
-from domain.dtos import SessionData, ImageData
+
+from cat_server.domain.interfaces import IUserSessionService, SessionData, ImageData
+
 
 
 class UserSessionService(IUserSessionService):
     def __init__(self):
-        self.sessions = {}
+        self._lock = asyncio.Lock()
+        self._sessions = {}
+        self.session_id = None
     
     async def create_session(self) -> str:
-        self.sessions = str(uuid.uuid4())
+        self.session_id = str(uuid.uuid4())
         async with self._lock:
             self._sessions[self.session_id] = SessionData(
                 session_id=self.session_id,
@@ -18,6 +22,7 @@ class UserSessionService(IUserSessionService):
                 images=[],
                 status='active'
             )
+
             return self.session_id
     
     async def get_session(self, session_id : str) -> SessionData:
@@ -30,13 +35,13 @@ class UserSessionService(IUserSessionService):
                 return False
             for image in images_data:
                 image.uploaded_at = datetime.now()
-            self._sessions[session_id].images.extends(images_data)
+            self._sessions[session_id].images.extend(images_data)
             return True
 
     async def delete_session(self, session_id : str) -> bool:
         async with self._lock:
             if session_id in self._sessions:
-                del self.sessions[session_id]
+                del self._sessions[session_id]
                 return True
             return False
     
