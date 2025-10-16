@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import String, Integer, DateTime, Boolean, Column, Float, ForeignKey
 from sqlalchemy.orm import relationship
-from core.base import Base
+from cat_server.core.base import Base
 
 class Cats(Base):
     __tablename__ = "Cats"
@@ -34,9 +34,9 @@ class CatCharacteristics(Base):
     id = Column('CharacteristicID', Integer, primary_key=True, autoincrement=True)
     cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
     color = Column('Color', String)
-    body_type = Column('BodyType', String)
     hair_length = Column("HairLength", String)
     confidence_level = Column("ConfidenceLevel", Float)
+    analyzed_at = Column('AnalyzedAt', DateTime, default=datetime.now)
 
     cats = relationship('Cats', back_populates='cat_characteristics')
 
@@ -69,7 +69,7 @@ class ProcessingLogs(Base):
 
     id = Column('LogID', Integer, primary_key=True, autoincrement=True)
     cat_id = Column('CatID', Integer, ForeignKey('Cats.CatID'), nullable=False)
-    processing_time = Column('ProcessingTime', Float) # Float - секунды, в бд нет правильной реализации таймеров
+    processing_time = Column('ProcessingTime', Float) # Float - секунды
     status = Column('Status', String) # "success", "error", "processing"
     error_message = Column('ErrorMessage', String)
     processed_at = Column('ProcessedAt', DateTime)
