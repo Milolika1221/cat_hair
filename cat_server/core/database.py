@@ -1,11 +1,20 @@
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from config import settings
+
+from cat_server.core.config import settings
+
 
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=True,  # Логирование SQL-запросов
     future=True
+)
+
+TEST_DATABASE_URL = "postgresql+asyncpg://postgres:123456789@localhost:5432/test_cat_haircut"
+
+test_engine = create_async_engine(
+    TEST_DATABASE_URL,
+    echo=True, future=True
 )
 
 AsyncSessionLocal = async_sessionmaker(
@@ -17,7 +26,6 @@ AsyncSessionLocal = async_sessionmaker(
 async def check_database_connection():
     async with AsyncSessionLocal() as session:
         try:
-            # Простой запрос для проверки соединения
             await session.execute(text("SELECT 1"))
             return True
         except Exception as e:
