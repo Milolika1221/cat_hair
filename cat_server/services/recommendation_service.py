@@ -1,7 +1,11 @@
 from datetime import datetime
 from typing import List
-from domain.dtos import AnalysisResult, HaircutRecommendation, ProcessingError, RecommendationResult, ScoredHaircut
-from domain.interfaces import ICatCharacteristicsRepository, IHaircutsRepository, IRecommendationRepository, IRecommendationService
+
+from cat_server.api.schemas import AnalysisResult, HaircutRecommendation, ProcessingError, RecommendationResult, ScoredHaircut
+from cat_server.domain import ProcessingException
+from cat_server.domain.interfaces import IRecommendationService
+from cat_server.infrastructure.repositories import ICatCharacteristicsRepository, IHaircutsRepository, IRecommendationRepository
+
 
 
 class RecommendationService(IRecommendationService):
@@ -16,17 +20,18 @@ class RecommendationService(IRecommendationService):
         self.recommendations_repo = recommendations_repository
 
     async def get_recommendations(self, cat_id: int) -> RecommendationResult:
-        """
-        Основной метод получения рекомендаций
-        """
+
         start_time = datetime.now()
         processing_steps = []
-        
         try:
             processing_steps.append("Получение характеристик кота")
             characteristics = await self.characteristics_repo.get_by_cat_id(cat_id)
             if not characteristics:
-                raise ProcessingError("Характеристики не найдены")
+                raise ProcessingException(ProcessingError(
+                    error_id="CHARACTERISTICS_EXCEPTION",
+                    error_type="Server Error",
+                    message="Характеристики не найдены")
+                )
             
             processing_steps.append("Загрузка каталога стрижек")
             all_haircuts = await self.haircuts_repo.get_all()
@@ -49,7 +54,8 @@ class RecommendationService(IRecommendationService):
                     cat_id=cat_id,
                     haircut_id=haircut_id,
                     is_no_haircut_required=recommendation.is_no_haircut_required,
-                    reason=recommendation.suitability_reason
+                    reason=recommendation.suitability_reason,
+                    created_at=recommendation.created_at,
                 )
             
             processing_time = (datetime.now() - start_time).total_seconds() * 1000
@@ -58,7 +64,7 @@ class RecommendationService(IRecommendationService):
                 cat_id=cat_id,
                 recommendations=top_recommendations,
                 processing_steps=processing_steps,
-                total_processing_time_ms=int(processing_time)
+                total_processing_time=int(processing_time)
             )
             
         except Exception as e:
@@ -67,11 +73,12 @@ class RecommendationService(IRecommendationService):
                 cat_id=cat_id,
                 recommendations=[],
                 processing_steps=processing_steps + [f"Ошибка: {str(e)}"],
-                total_processing_time_ms=int(processing_time)
+                total_processing_time=int(processing_time)
             )
         
 
-    async def _apply_rules(self, characteristics: AnalysisResult, haircuts: List) -> List[HaircutRecommendation]:
+    @staticmethod
+    async def _apply_rules(characteristics: AnalysisResult, haircuts: List) -> List[ScoredHaircut]:
         recommendations = []
         
         for haircut in haircuts:
@@ -87,18 +94,18 @@ class RecommendationService(IRecommendationService):
                 reasons.append(f"Подходит для окраса \"{characteristics.color}\"")
             
             if score >= 1: 
-                recommendations.append(HaircutRecommendation(
+                recommendations.append(ScoredHaircut(
+                    haircut_id=haircut.id,
                     haircut_name=haircut.name,
-                    haircut_description=haircut.description,
-                    suitability_reason="; ".join(reasons),
-                    is_no_haircut_required=False
+                    score=score,
+                    match_reasons=reasons,
+                    confidence=False
                 ))
         
         return recommendations
     
     async def _rank_recommendations(self, scored_haircuts: List[ScoredHaircut]) -> List[HaircutRecommendation]:
         if not scored_haircuts:
-            # нет подходящих стрижек - возвращаем рекомендацию не стричь
             return [HaircutRecommendation(
                 haircut_name="Не стричь",
                 haircut_description="Рекомендуется оставить шерсть без изменений",
@@ -125,8 +132,9 @@ class RecommendationService(IRecommendationService):
             ))
         
         return recommendations
-    
-    def _format_reason(self, match_reasons: List[str], score: float, confidence: float) -> str:
+
+    @staticmethod
+    def _format_reason(match_reasons: List[str], score: float, confidence: float) -> str:
         reasons_text = ". ".join(match_reasons)
         
         confidence_text = "Высокая уверенность" if confidence > 0.8 else \
