@@ -35,7 +35,7 @@ class ICatImagesRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id(self, cat_id : int) -> CatImages : pass
+    async def get_by_id(self, cat_id : int) -> CatImages | None : pass
 
     @abstractmethod
     async def save(self, cat_image : CatImages) -> CatImages : pass
@@ -58,7 +58,7 @@ class ICatCharacteristicsRepository(ABC):
     async def get_by_id(self, characteristic_id : int) -> CatCharacteristics : pass
     
     @abstractmethod
-    async def get_by_cat_id(self, cat_id : int) -> CatCharacteristics : pass
+    async def get_by_cat_id(self, cat_id : int) -> CatCharacteristics | None : pass
     
     @abstractmethod
     async def save(self, characteristic: CatCharacteristics) -> CatCharacteristics : pass
@@ -75,7 +75,7 @@ class IRecommendationRepository(ABC):
     async def get_by_id(self, recommendation_id : int) -> Recommendations : pass
 
     @abstractmethod
-    async def get_by_cat_id(self, cat_id : int) -> Recommendations : pass
+    async def get_by_cat_id(self, cat_id : int) -> Recommendations | None : pass
 
     @abstractmethod
     async def save(self, recommendation : Recommendations) -> Recommendations : pass
@@ -114,7 +114,7 @@ class IProcessingLogsRepository(ABC):
     async def get_by_id(self, log_id : int) -> ProcessingLogs : pass
 
     @abstractmethod
-    async def get_by_cat_id(self, cat_id : int) -> ProcessingLogs : pass
+    async def get_by_cat_id(self, cat_id : int) -> ProcessingLogs | None: pass
 
     @abstractmethod
     async def save(self, log : ProcessingLogs) -> ProcessingLogs : pass
@@ -188,7 +188,7 @@ class CatCharacteristicsRepository(ICatCharacteristicsRepository):
         self.session = session
 
     async def create(self, cat_id: int, color: str,
-                    hair_length: str, confidence_level: float, 
+                    hair_length: str, confidence_level: float,
                     analyzed_at: datetime) -> CatCharacteristics:
 
         characteristic = CatCharacteristics(
@@ -207,8 +207,8 @@ class CatCharacteristicsRepository(ICatCharacteristicsRepository):
     async def get_by_id(self, cat_characteristic_id):
         return await self.session.get(CatCharacteristics, cat_characteristic_id)
 
-    async def get_by_cat_id(self, cat_id) -> CatCharacteristics:
-        result = await self.session.get(CatCharacteristics, cat_id)
+    async def get_by_cat_id(self, cat_id):
+        result = await self.session.execute(select(CatCharacteristics).where(CatCharacteristics.cat_id == cat_id))
         return result  
 
     async def save(self, cat_characteristic):
@@ -224,7 +224,7 @@ class CatCharacteristicsRepository(ICatCharacteristicsRepository):
         return True
 
 
-class RecommendationRepository(IRecommendationRepository, ABC):
+class RecommendationRepository(IRecommendationRepository):
     def __init__(self, session : AsyncSession):
         self.session = session
     
@@ -237,8 +237,17 @@ class RecommendationRepository(IRecommendationRepository, ABC):
         await self.session.refresh(recommendations)
         return recommendations
 
+    async def save(self, recommendation):
+        await self.session.commit()
+        await self.session.refresh(recommendation)
+        return recommendation
+
     async def get_by_id(self, recommendation_id):
         return await self.session.get(Recommendations, recommendation_id)
+
+    async def get_by_cat_id(self, cat_id):
+        result = await self.session.execute(select(Recommendations).where(Recommendations.cat_id == cat_id))
+        return result
 
     async def save(self, recommendation):
         await self.session.commit()
@@ -275,8 +284,8 @@ class ProcessingLogsRepository(IProcessingLogsRepository):
         await self.session.refresh(logs)
         return logs
 
-    async def get_by_cat_id(self, cat_id : int) -> ProcessingLogs:
-        return await self.session.get(ProcessingLogs, cat_id=cat_id)
+    async def get_by_cat_id(self, cat_id : int) :
+        return await self.session.execute(select(ProcessingLogs).where(ProcessingLogs.cat_id == cat_id))
     
     async def delete(self, log_id):
         logs = await self.session.get(ProcessingLogs, log_id)
