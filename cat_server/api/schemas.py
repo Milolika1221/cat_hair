@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 from cat_server.domain.dto import *
 
 #  API Request Schemas
@@ -12,7 +12,7 @@ class ProcessCatRequest(BaseModel):
 class ImageUploadResponse(BaseModel):
     session_id : str
     cat_id: int
-    filename: str
+    file_name: str
     upload_timestamp: float  # секунды
 
 class ProcessCatResponse(BaseModel):
@@ -28,7 +28,7 @@ class CatProcessingStatusResponse(BaseModel):
 class CatRecommendationsResponse(BaseModel):
     cat_id: int
     recommendations: List['HaircutRecommendation']
-    characteristics: Optional['AnalysisResult'] = None
+    characteristics: Optional[List['AnalysisResult']] = None
     processed_images: Optional[List['ImageProcessingResponse']] = None
 
 class SessionCreateResponse(BaseModel):
