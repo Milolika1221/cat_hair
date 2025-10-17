@@ -1,3 +1,5 @@
+import io
+
 import pytest
 import asyncio
 from PIL import Image
@@ -19,15 +21,18 @@ class TestSessionAPI:
     def test_upload_images_no_session(self):
         """Тест загрузки изображений в несуществующую сессию"""
         image = Image.new("RGB", (100, 100))
+        image_bytes = io.BytesIO()
+        image.save(image_bytes, format="JPEG")
+        image_bytes.seek(0)
+
         response = client.post(
             "/api/v1/invalid_session/0/images",
-            files=[("files", ("test.jpg", b"fake_data", "image/jpeg"))]
+            files=[("files", ("test.jpg", image_bytes, "image/jpeg"))]
         )
         
         assert response.status_code == 404
     
     def test_health_check(self):
-        """Тест health check эндпоинта"""
         response = client.get("/health")
         
         assert response.status_code == 200
@@ -37,7 +42,7 @@ class TestSessionAPI:
 class TestProcessingAPI:
     def test_process_images_invalid_session(self):
         """Тест обработки несуществующей сессии"""
-        response = client.post("/api/v1/sessions/invalid_session/process")
+        response = client.post("/api/v1/invalid_session/0/process")
         
         assert response.status_code == 404
 
