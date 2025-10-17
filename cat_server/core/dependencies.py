@@ -8,6 +8,8 @@ from cat_server.core.database import AsyncSessionLocal
 from cat_server.core.config import settings
 
 
+USER_SESSION_SERVICE = UserSessionService()
+
 async def get_db_session():
     async with AsyncSessionLocal() as session:
         try:
@@ -16,7 +18,7 @@ async def get_db_session():
             await session.close()
 
 def get_user_session_service() -> UserSessionService :
-    return UserSessionService()
+    return USER_SESSION_SERVICE
 
 def get_image_processing_service(
         user_session : UserSessionService = Depends(get_user_session_service),

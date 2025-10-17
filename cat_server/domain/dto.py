@@ -4,17 +4,15 @@ from typing import Optional, List, Dict, Any
 
 from pydantic import BaseModel
 
-from cat_server.domain import Haircuts
-
 
 class ImageData(BaseModel):
-    filename: str
+    file_name: str
     data: bytes
     size: int
     format: str
     resolution: Optional[str] = None
     uploaded_at: Optional[datetime] = None
-    is_processed: bool = False  # False - исходное, True - обработанное
+    is_processed: Optional[bool] = False
 
 class SessionData(BaseModel):
     session_id: str
@@ -26,7 +24,7 @@ class AnalysisResult(BaseModel):
     color: str
     hair_length: str
     confidence: float  # 0.0-1.0
-    analysis_timestamp: datetime
+    analyzed_at: datetime
 
 class ProcessingError(BaseModel):
     error_id: str
@@ -38,30 +36,28 @@ class ProcessingError(BaseModel):
 class ProcessingException(Exception):
     def __init__(self, error : ProcessingError):
         super().__init__(error.message)
-
+        self.error = error
 
 
 class ImageProcessingResponse(BaseModel):
-    filename: str
-    data: str  # base64
+    file_name: str
     format: str
     resolution: str
     processing_type: str  # "enhanced", "segmented", "annotated"
 
     @classmethod
-    def from_image_data(cls, image_data: 'ImageData', processing_type: str):
+    def from_cat_images(cls, cat_image: 'CatImages', processing_type: str):  # ✅ Новый метод
         return cls(
-            filename=image_data.filename,
-            data=base64.b64encode(image_data.data).decode('utf-8'),
-            format=image_data.format,
-            resolution=image_data.resolution or "unknown",
+            file_name=cat_image.file_name,
+            format=cat_image.format,
+            resolution=cat_image.resolution or "unknown",
             processing_type=processing_type
         )
 
 class ProcessingResult(BaseModel):
     session_id: str
     cat_id: int
-    characteristics: 'AnalysisResult' = None
+    characteristics: List['AnalysisResult'] = None
     processed_images: List[ImageProcessingResponse]  # Для ответа пользователю
     processing_time_ms: int
     status: str
@@ -79,7 +75,7 @@ class NeuralNetworkRequest(BaseModel):
     processing_type: str = "analysis"  # "analysis", "enhancement", "segmentation"
 
 class NeuralNetworkResponse(BaseModel):
-    analysis_result: 'AnalysisResult'
+    analysis_result: List['AnalysisResult']
     processed_images: List['ImageData']
     processing_time_ms: int
     processing_metadata: Dict[str, Any]
@@ -95,8 +91,11 @@ class ScoredHaircut(BaseModel):
     haircut_name: str  # или как у тебя называется модель стрижки
     score: float
     match_reasons: List[str]
-    # confidence_boost: float  # например, от 0.0 до 1.0
     confidence: bool  # или убери, если не используется
+
+class AnalysisWithRecommendations(BaseModel):
+    analysis_result: AnalysisResult
+    recommendations: List[ScoredHaircut]
 
 class RecommendationResult(BaseModel):
     cat_id: int

@@ -12,7 +12,7 @@ class UserSessionService(IUserSessionService):
         self._lock = asyncio.Lock()
         self._sessions = {}
         self.session_id = None
-    
+
     async def create_session(self) -> str:
         self.session_id = str(uuid.uuid4())
         async with self._lock:
@@ -22,9 +22,9 @@ class UserSessionService(IUserSessionService):
                 images=[],
                 status='active'
             )
-
+            print(f"✅ Session created and stored: {self.session_id}")
             return self.session_id
-    
+
     async def get_session(self, session_id : str) -> SessionData:
         async with self._lock:
             return self._sessions.get(session_id)
@@ -33,8 +33,7 @@ class UserSessionService(IUserSessionService):
         async with self._lock:
             if session_id not in self._sessions:
                 return False
-            for image in images_data:
-                image.uploaded_at = datetime.now()
+            self._sessions[session_id].status = 'processing'
             self._sessions[session_id].images.extend(images_data)
             return True
 
@@ -44,7 +43,7 @@ class UserSessionService(IUserSessionService):
                 del self._sessions[session_id]
                 return True
             return False
-    
+
     
 
 

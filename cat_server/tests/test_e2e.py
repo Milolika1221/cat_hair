@@ -12,7 +12,7 @@ class TestFullFlow:
 
     @pytest.mark.asyncio
     async def test_complete_grooming_flow(self):
-        """Полный тест: сессия → загрузка → обработка → рекомендации"""
+        """сессия → загрузка → обработка → рекомендации"""
         base_url = "http://localhost:8000/api/v1"
 
         async with aiohttp.ClientSession() as session:
@@ -28,14 +28,6 @@ class TestFullFlow:
             img.save(img_bytes, format='JPEG')
             img_bytes.seek(0)
 
-            valid_images = [
-                ImageData(
-                    filename="test.jpg",
-                    data=img_bytes.getvalue(),
-                    size=5 * 1024 * 1024,  # 5MB
-                    format="JPEG"
-                )
-            ]
 
             # 2. Загружаем тестовое изображение
 
@@ -47,19 +39,23 @@ class TestFullFlow:
                 content_type='image/jpeg'
             )
 
+            cat_id = 0
+
             async with session.post(
-                f"{base_url}/{session_id}/1/images",
+                f"{base_url}/{session_id}/{cat_id}/images",
                 data=form_data
             ) as resp:
-                error_detail = await resp.text()  # или resp.json(), если JSON
+                error_detail = await resp.text()
                 print(f"❌ Ошибка: {resp.status}, детали: {error_detail}")
                 assert resp.status == 200
                 upload_result = await resp.json()
-                assert upload_result["images_uploaded"] == 1
+                returned_cat_id = upload_result[0]["cat_id"]
+                assert returned_cat_id != 0
+                assert len(upload_result) == 1
                 print("✅ Image uploaded")
 
             # 3. Запускаем обработку
-            async with session.post(f"{base_url}/sessions/{session_id}/process") as resp:
+            async with session.get(f"{base_url}/{session_id}/{upload_result[0]['cat_id']}/recommendations") as resp:
                 assert resp.status == 200
                 process_result = await resp.json()
                 assert "cat_id" in process_result
