@@ -43,7 +43,7 @@ class NeuralNetworkClient:
                 form_data.add_field(
                     name='image',
                     value=image.data,
-                    filename=f'{image.filename}',
+                    filename=f'{image.file_name}',
                     content_type=f'image/{image.format.lower()}'
                 )
 
@@ -54,7 +54,7 @@ class NeuralNetworkClient:
                 'total_image' : len(request.images),
                 'image_metadata' : [
                     {
-                        'filename' : img.filename,
+                        'filename' : img.file_name,
                         'format' : img.format,
                         'size' : img.size,
                         'resolution' : img.resolution
@@ -103,7 +103,7 @@ class NeuralNetworkClient:
             color=analysis_data.get('color', 'не определен'),
             hair_length=analysis_data.get('hair_length', 'не определен'),
             confidence=analysis_data.get('confidence', 0.0),
-            analysis_timestamp=datetime.fromisoformat(
+            analyzed_at=datetime.fromisoformat(
                 analysis_data.get('analysis_timestamp', datetime.now().isoformat())
             )
         )
@@ -112,7 +112,7 @@ class NeuralNetworkClient:
         for img_data in data.get('processed_images', []):
             image_bytes = base64.b64decode(img_data['data'])
             processed_images.append(ImageData(
-                filename=img_data['filename'],
+                file_name=img_data['filename'],
                 data=image_bytes,
                 size=len(image_bytes),
                 format=img_data['format'],
@@ -121,7 +121,7 @@ class NeuralNetworkClient:
             ))
 
         result = NeuralNetworkResponse(
-            analysis_result=analysis_result,
+            analysis_result=[analysis_result],
             processed_images=processed_images,
             processing_time_ms=data.get('processing_time_ms', 0),
             processing_metadata=data.get('processing_metadata', {})
@@ -236,17 +236,17 @@ class ImageProcessingService:
                 processed_images_info.append(image_info)
 
             logger.info("📊 Сохранение характеристик кота в БД...")
-            characteristic = await self.characteristics_repo.create(
+            characteristics = [await self.characteristics_repo.create(
                 cat_id=cat_id,
-                color=nn_response.analysis_result.color,
-                hair_length=nn_response.analysis_result.hair_length,
-                confidence_level=nn_response.analysis_result.confidence,
-                analyzed_at=nn_response.analysis_result.analysis_timestamp
-            )
+                color=res.color,
+                hair_length=res.hair_length,
+                confidence_level=res.confidence,
+                analyzed_at=res.analyzed_at
+            )for res in nn_response.analysis_result]
 
             logger.info("📦 Формирование ответа пользователю...")
             processed_responses = [
-                ImageProcessingResponse.from_image_data(img, 'enhanced')
+                ImageProcessingResponse.from_cat_images(cat_image=img, processing_type='enhanced')
                 for img in nn_response.processed_images
             ]
 
@@ -271,7 +271,7 @@ class ImageProcessingService:
                 processed_images=[],
                 processing_time_ms=processing_time_ms,
                 status='error',
-                error=e.error  # передаём только ошибку, не объект ProcessingException
+                error=e.error
             )
         except Exception as e:
             logger.exception("💥 Неожиданная ошибка при обработке изображений")
@@ -290,22 +290,50 @@ class ImageProcessingService:
                 )
             )
 
-    @staticmethod
-    async def get_processing_result(self, cat_id: int) -> Optional[ProcessingResult] | None:
+    async def get_processing_result(self, session_id : str, cat_id: int) -> Optional[ProcessingResult]:
+        start_time = datetime.now()
         logger.debug(f"🔍 Запрос результата обработки для cat_id={cat_id}")
-        return None
+        # Получаем характеристики
+        characteristics = await self.characteristics_repo.get_by_cat_id(cat_id)
+        if not characteristics:
+            return None
+
+
+        characteristic_dto_list = [AnalysisResult(
+            color=characteristic.color,
+            hair_length=characteristic.hair_length,
+            confidence=characteristic.confidence_level,
+            analyzed_at=characteristic.analyzed_at
+
+        ) for characteristic in characteristics]
+
+        images = await self.images_repo.get_by_cat_id(cat_id)
+
+        result = ProcessingResult(
+            session_id=session_id,
+            cat_id=cat_id,
+            characteristics=characteristic_dto_list,
+            processed_images=[
+                ImageProcessingResponse.from_cat_images(img, "enhanced") for img in images
+            ],
+            processing_time_ms=int((datetime.now() - start_time).total_seconds() * 1000),
+            status="completed",
+            error=None
+        )
+
+        return result
 
     async def _save_original_image(self, cat_id: int, image_data: ImageData) -> dict:
         cat_dir = os.path.join(self.upload_dir, str(cat_id), "original")
         os.makedirs(cat_dir, exist_ok=True)
 
-        file_path = os.path.join(cat_dir, image_data.filename)
+        file_path = os.path.join(cat_dir, image_data.file_name)
         async with aiofiles.open(file_path, 'wb') as f:
             await f.write(image_data.data)
 
         image_record = await self.images_repo.create(
             cat_id=cat_id,
-            file_name=image_data.filename,
+            file_name=image_data.file_name,
             file_path=file_path,
             file_size=image_data.size,
             resolution=image_data.resolution,
@@ -320,13 +348,13 @@ class ImageProcessingService:
         cat_dir = os.path.join(self.upload_dir, str(cat_id), "processed")
         os.makedirs(cat_dir, exist_ok=True)
 
-        file_path = os.path.join(cat_dir, image_data.filename)
+        file_path = os.path.join(cat_dir, image_data.file_name)
         async with aiofiles.open(file_path, 'wb') as f:
             await f.write(image_data.data)
 
         image_record = await self.images_repo.create(
             cat_id=cat_id,
-            file_name=image_data.filename,
+            file_name=image_data.file_name,
             file_path=file_path,
             file_size=image_data.size,
             resolution=image_data.resolution,
@@ -346,7 +374,7 @@ class ImageProcessingService:
                 errors.append(ProcessingError(
                     error_id="VALIDATION_SIZE",
                     error_type="validation",
-                    message=f"Изображение {image.filename} превышает 10MB",
+                    message=f"Изображение {image.file_name} превышает 10MB",
                     suggestions=["Используйте изображение размером до 10MB"]
                 ))
                 continue
@@ -358,7 +386,7 @@ class ImageProcessingService:
                         errors.append(ProcessingError(
                             error_id="VALIDATION_RESOLUTION",
                             error_type="validation",
-                            message=f"Изображение {image.filename} имеет недостаточное разрешение",
+                            message=f"Изображение {image.file_name} имеет недостаточное разрешение",
                             details=f"Текущее: {width}x{height}, минимальное: 640x480",
                             suggestions=["Используйте изображение с более высоким разрешением"]
                         ))
@@ -369,7 +397,7 @@ class ImageProcessingService:
                 errors.append(ProcessingError(
                     error_id="VALIDATION_FORMAT",
                     error_type="validation",
-                    message=f"Неверный формат изображения {image.filename}",
+                    message=f"Неверный формат изображения {image.file_name}",
                     details=str(e),
                     suggestions=["Используйте формат JPEG или PNG"]
                 ))
