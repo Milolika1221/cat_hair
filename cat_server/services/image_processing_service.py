@@ -1,4 +1,5 @@
 # services/image_processing_service.py
+
 import asyncio
 import base64
 import json
@@ -6,6 +7,8 @@ import os
 import io
 from datetime import datetime
 from typing import Dict, Optional, List, Any
+import logging
+
 import aiohttp
 from PIL import Image as PILImage
 import aiofiles
@@ -15,21 +18,25 @@ from cat_server.api.schemas import (
     NeuralNetworkRequest,
     ProcessingResult,
     ProcessingError,
+    ProcessingException,
     ImageProcessingResponse,
     ValidationResult,
 )
-from cat_server.domain import ProcessingException
 from cat_server.domain.dto import NeuralNetworkResponse, AnalysisResult
 from cat_server.infrastructure.repositories import ICatsRepository, ICatImagesRepository, ICatCharacteristicsRepository
 from cat_server.services.user_session_service import UserSessionService
 
+# ✅ Настройка логгера
+logger = logging.getLogger(__name__)
 
 class NeuralNetworkClient:
     def __init__(self, base_url : str, timeout : int = 60):
         self.base_url = base_url
         self.timeout = timeout
+        logger.info(f"🔧 NeuralNetworkClient инициализирован с URL: {base_url}, timeout: {timeout}")
 
     async def analyze_and_process_image(self, request : NeuralNetworkRequest) -> NeuralNetworkResponse | None :
+        logger.info(f"📤 Отправка запроса в нейросеть: session_id={request.session_id}, cat_id={request.cat_id}")
         async with aiohttp.ClientSession() as session :
             form_data = aiohttp.FormData()
             for image in request.images:
@@ -56,17 +63,21 @@ class NeuralNetworkClient:
             }
             form_data.add_field('metadata', json.dumps(metadata))
             try :
+                logger.debug(f"📡 Отправка POST-запроса на {self.base_url}")
                 async with session.post(
                         f'{self.base_url}',
                         data=form_data,
                         timeout=aiohttp.ClientTimeout(total=self.timeout)
                 ) as response :
+                    logger.info(f"📥 Получен ответ от нейросети: статус {response.status}")
                     if response.status == 200 :
                         response_data = await response.json()
+                        logger.debug(f"✅ Успешный ответ от нейросети: {response_data}")
                         return self._parse_success_response(response_data)
                     else:
                         await self._handle_http_error(response)
             except asyncio.TimeoutError:
+                logger.error("⏰ Таймаут при запросе к нейросети")
                 raise ProcessingException(ProcessingError(
                     error_id="NEURAL_API_TIMEOUT",
                     error_type="neural_api",
@@ -75,6 +86,7 @@ class NeuralNetworkClient:
                 ))
 
             except aiohttp.ClientError as e:
+                logger.exception("🔌 Ошибка подключения к нейросети")
                 raise ProcessingException(ProcessingError(
                     error_id="NEURAL_API_CONNECTION",
                     error_type="neural_api",
@@ -85,6 +97,7 @@ class NeuralNetworkClient:
 
     @staticmethod
     def _parse_success_response(data: Dict[str, Any]) -> NeuralNetworkResponse:
+        logger.debug("🔄 Парсинг успешного ответа от нейросети")
         analysis_data = data.get('analysis_result', {})
         analysis_result = AnalysisResult(
             color=analysis_data.get('color', 'не определен'),
@@ -107,16 +120,19 @@ class NeuralNetworkClient:
                 is_processed=True
             ))
 
-        return NeuralNetworkResponse(
+        result = NeuralNetworkResponse(
             analysis_result=analysis_result,
             processed_images=processed_images,
             processing_time_ms=data.get('processing_time_ms', 0),
             processing_metadata=data.get('processing_metadata', {})
         )
+        logger.info("✅ Ответ от нейросети успешно распарсен")
+        return result
 
     @staticmethod
     async def _handle_http_error(response: aiohttp.ClientResponse):
         error_text = await response.text()
+        logger.warning(f"⚠️ Нейросеть вернула ошибку: статус {response.status}, текст: {error_text}")
 
         error_mapping = {
             400: ("NEURAL_API_BAD_REQUEST", "Некорректный запрос"),
@@ -138,11 +154,11 @@ class NeuralNetworkClient:
             error_type="neural_api",
             message=f"{default_message} (статус: {response.status})",
             details=error_text[:500],
-            suggestions=NeuralNetworkClient._get_error_suggestions(response.status)  # Исправлено: вызов статического метода
+            suggestions=NeuralNetworkClient._get_error_suggestions(response.status)
         ))
 
     @staticmethod
-    def _get_error_suggestions(status_code: int) -> List[str]:  # Исправлено: убран self
+    def _get_error_suggestions(status_code: int) -> List[str]:
         """Возвращает подсказки по устранению ошибок"""
         suggestions = {
             400: ["Проверьте формат отправляемых изображений", "Убедитесь в корректности метаданных"],
@@ -150,7 +166,7 @@ class NeuralNetworkClient:
             500: ["Попробуйте позже", "Свяжитесь с поддержкой ИИ сервиса"],
             503: ["Сервис временно недоступен", "Попробуйте через несколько минут"]
         }
-        return suggestions.get(status_code, ["Попробуйте позже"])
+        return suggestions.get(status_code, ["Попробуйте позже", "Обратитесь в поддержку"])
 
 
 class ImageProcessingService:
@@ -171,14 +187,17 @@ class ImageProcessingService:
         self.upload_dir = upload_dir
 
         os.makedirs(upload_dir, exist_ok=True)
+        logger.info(f"📁 ImageProcessingService инициализирован, upload_dir: {upload_dir}")
 
     async def process_images(self, session_id: str, cat_id: int, images_data: List[ImageData]) -> ProcessingResult:
         start_time = datetime.now()
+        logger.info(f"🚀 Начало обработки изображений: session_id={session_id}, cat_id={cat_id}, images={len(images_data)}")
         try:
             session_images = images_data
 
             validation = await self.validate_images(session_images)
             if not validation.is_valid:
+                logger.warning(f"❌ Валидация не пройдена: {[err.message for err in validation.errors]}")
                 raise ProcessingException(ProcessingError(
                     error_id="VALIDATION_FAILED",
                     error_type="validation",
@@ -188,12 +207,14 @@ class ImageProcessingService:
 
             cat = await self.cats_repo.get_by_id(cat_id)
             if not cat:
+                logger.warning(f"🐱 Кот не найден: cat_id={cat_id}")
                 raise ProcessingException(ProcessingError(
                     error_id="CAT_NOT_FOUND",
                     error_type="database",
                     message="Кот не найден"
                 ))
 
+            logger.info("💾 Сохранение оригинальных изображений...")
             orig_images_info = []
             for image_data in session_images:
                 image_info = await self._save_original_image(cat_id, image_data)
@@ -205,14 +226,16 @@ class ImageProcessingService:
                 images=session_images,
                 processing_type='analysis_and_enhancement'
             )
+            logger.info("🧠 Отправка изображений в нейросеть...")
             nn_response = await self.neural_client.analyze_and_process_image(nn_request)
 
+            logger.info("💾 Сохранение обработанных изображений...")
             processed_images_info = []
             for processed_image in nn_response.processed_images:
                 image_info = await self._save_processed_image(cat_id, processed_image)
                 processed_images_info.append(image_info)
 
-            # характеристики просто ушуршат в БД
+            logger.info("📊 Сохранение характеристик кота в БД...")
             characteristic = await self.characteristics_repo.create(
                 cat_id=cat_id,
                 color=nn_response.analysis_result.color,
@@ -221,24 +244,26 @@ class ImageProcessingService:
                 analyzed_at=nn_response.analysis_result.analysis_timestamp
             )
 
-            # ответ пользователю
+            logger.info("📦 Формирование ответа пользователю...")
             processed_responses = [
                 ImageProcessingResponse.from_image_data(img, 'enhanced')
                 for img in nn_response.processed_images
             ]
 
             processing_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+            logger.info(f"✅ Обработка завершена успешно: время={processing_time_ms}ms")
 
             return ProcessingResult(
                 session_id=session_id,
-                cat_id=cat.id,  # или cat_id
+                cat_id=cat.id,
                 characteristics=nn_response.analysis_result,
                 processed_images=processed_responses,
                 processing_time_ms=processing_time_ms,
                 status='completed',
                 error=None
             )
-        except ProcessingError as e:
+        except ProcessingException as e:
+            logger.warning(f"⚠️ Обработка завершена с ошибкой (ожидаемой): {e.error.message}")
             processing_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
             return ProcessingResult(
                 session_id=session_id,
@@ -246,9 +271,10 @@ class ImageProcessingService:
                 processed_images=[],
                 processing_time_ms=processing_time_ms,
                 status='error',
-                error=e
+                error=e.error  # передаём только ошибку, не объект ProcessingException
             )
         except Exception as e:
+            logger.exception("💥 Неожиданная ошибка при обработке изображений")
             processing_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
             return ProcessingResult(
                 session_id=session_id,
@@ -264,8 +290,10 @@ class ImageProcessingService:
                 )
             )
 
-    # async def get_processing_result(self, cat_id: int) -> Optional[ProcessingResult]:
-    #     return None
+    @staticmethod
+    async def get_processing_result(self, cat_id: int) -> Optional[ProcessingResult] | None:
+        logger.debug(f"🔍 Запрос результата обработки для cat_id={cat_id}")
+        return None
 
     async def _save_original_image(self, cat_id: int, image_data: ImageData) -> dict:
         cat_dir = os.path.join(self.upload_dir, str(cat_id), "original")
@@ -281,9 +309,11 @@ class ImageProcessingService:
             file_path=file_path,
             file_size=image_data.size,
             resolution=image_data.resolution,
-            format=image_data.format
+            format=image_data.format,
+            uploaded_at=datetime.now()
         )
 
+        logger.debug(f"💾 Оригинальное изображение сохранено: {file_path}")
         return {"id": image_record.id, "path": file_path}
 
     async def _save_processed_image(self, cat_id: int, image_data: ImageData) -> dict:
@@ -300,12 +330,15 @@ class ImageProcessingService:
             file_path=file_path,
             file_size=image_data.size,
             resolution=image_data.resolution,
-            format=image_data.format
+            format=image_data.format,
+            uploaded_at=datetime.now()
         )
+        logger.debug(f"💾 Обработанное изображение сохранено: {file_path}")
         return {"id": image_record.id, "path": file_path}
 
     @staticmethod
     async def validate_images(images_data: List[ImageData]) -> ValidationResult:
+        logger.debug("🔍 Начало валидации изображений...")
         errors = []
 
         for image in images_data:
@@ -341,6 +374,7 @@ class ImageProcessingService:
                     suggestions=["Используйте формат JPEG или PNG"]
                 ))
 
+        logger.debug(f"🔍 Валидация завершена: ошибок={len(errors)}")
         return ValidationResult(
             is_valid=len(errors) == 0,
             errors=errors
