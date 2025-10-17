@@ -91,8 +91,11 @@ class ScoredHaircut(BaseModel):
     haircut_name: str  # или как у тебя называется модель стрижки
     score: float
     match_reasons: List[str]
-    # confidence_boost: float  # например, от 0.0 до 1.0
     confidence: bool  # или убери, если не используется
+
+class AnalysisWithRecommendations(BaseModel):
+    analysis_result: AnalysisResult
+    recommendations: List[ScoredHaircut]
 
 class RecommendationResult(BaseModel):
     cat_id: int
