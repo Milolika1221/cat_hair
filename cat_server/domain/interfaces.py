@@ -30,6 +30,10 @@ class IImageProcessingService(ABC):
     async def validate_images(self, images_data: List[ImageData]) -> ValidationResult:
         pass
 
+    @abstractmethod
+    async def get_processing_result(self, session_id : str, cat_id : int) -> ProcessingResult:
+        pass
+
 class IRecommendationService(ABC):
     @abstractmethod
     async def get_recommendations(self, cat_id: int) -> RecommendationResult:
