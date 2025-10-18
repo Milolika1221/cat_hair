@@ -37,7 +37,7 @@ class TestUserSessionService:
         # Создаем тестовые изображения
         test_images = [
             ImageData(
-                filename="test1.jpg",
+                file_name="test1.jpg",
                 data=img_bytes.getvalue(),
                 size=1000,
                 format="JPEG"
@@ -50,7 +50,7 @@ class TestUserSessionService:
         # Проверяем, что изображения добавились
         session = await self.service.get_session(session_id)
         assert len(session.images) == 1
-        assert session.images[0].filename == "test1.jpg"
+        assert session.images[0].file_name == "test1.jpg"
 
 class TestImageProcessingService:
     def setup_method(self):
@@ -75,7 +75,7 @@ class TestImageProcessingService:
 
         valid_images = [
             ImageData(
-                filename="test.jpg",
+                file_name="test.jpg",
                 data=img_bytes.getvalue(),
                 size=5 * 1024 * 1024,  # 5MB
                 format="JPEG"
@@ -91,7 +91,7 @@ class TestImageProcessingService:
         """Тест валидации слишком большого изображения"""
         large_images = [
             ImageData(
-                filename="large.jpg", 
+                file_name="large.jpg",
                 data=b"fake_data",
                 size=15 * 1024 * 1024,  # 15MB - больше лимита
                 format="JPEG"
