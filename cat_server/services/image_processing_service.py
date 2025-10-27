@@ -8,6 +8,7 @@ import io
 from datetime import datetime
 from typing import Dict, Optional, List, Any
 import logging
+from cat_server.services.neural_service import neural_service
 
 import aiohttp
 from PIL import Image as PILImage
@@ -34,6 +35,52 @@ class NeuralNetworkClient:
         self.base_url = base_url
         self.timeout = timeout
         logger.info(f"🔧 NeuralNetworkClient инициализирован с URL: {base_url}, timeout: {timeout}")
+    
+    async def _process_with_local_neural(self, images_data: List[ImageData]) -> NeuralNetworkResponse:
+        """Обработка изображений локальной нейросетью"""
+        logger.info("🧠 Обработка локальной нейросетью...")
+        
+        image_data = images_data[0].data
+        neural_result = await neural_service.process_image(image_data)
+        
+        if not neural_result["success"]:
+            raise ProcessingException(ProcessingError(
+                error_id="LOCAL_NEURAL_ERROR",
+                error_type="neural_local",
+                message=neural_result.get("error", "Local neural network error")
+            ))
+        
+        top_prediction = neural_result.get("top_prediction", {})
+        
+        # Создаем AnalysisResult
+        analysis_result = AnalysisResult(
+            color="определен нейросетью",
+            hair_length="определен нейросетью", 
+            confidence=top_prediction.get("confidence", 0.0),
+            analyzed_at=datetime.now()
+        )
+        
+        processed_images = []
+        for img in images_data:
+            processed_images.append(ImageData(
+                file_name=f"processed_{img.file_name}",
+                data=img.data,
+                size=img.size,
+                format=img.format,
+                resolution=img.resolution,
+                is_processed=True
+            ))
+        
+        return NeuralNetworkResponse(
+            analysis_result=[analysis_result],
+            processed_images=processed_images,
+            processing_time_ms=0,
+            processing_metadata={
+                "model_type": "teachable_machine",
+                "predictions": neural_result.get("predictions", []),
+                "top_prediction": top_prediction
+            }
+        )
 
     async def analyze_and_process_image(self, request : NeuralNetworkRequest) -> NeuralNetworkResponse | None :
         logger.info(f"📤 Отправка запроса в нейросеть: session_id={request.session_id}, cat_id={request.cat_id}")

@@ -7,7 +7,7 @@ from datetime import datetime
 from cat_server.api.endpoints import router
 from cat_server.core.config import settings
 from cat_server.core.database import check_database_connection
-
+from cat_server.services.neural_service import neural_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,6 +19,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"❌ Database connection failed: {e}")
         raise
+
+    # Инициализация нейросети
+    try:
+        await neural_service.initialize()
+        print("✅ Neural network loaded OK")
+    except Exception as e:
+        print(f"⚠️ Neural network loading failed: {e}")
     
     print(f"✅ API is ready at http://localhost:8000")
     print(f"📚 Documentation: http://localhost:8000/docs")
