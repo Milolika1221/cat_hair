@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.myapplication"
+    namespace = "com.example.analys"
     compileSdk = 34
 
     defaultConfig {
@@ -59,7 +59,9 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.material)
     implementation(libs.androidx.activity.compose)
-
+    //навигация
+    implementation(libs.androidx.navigation.compose)
+    implementation("androidx.navigation:navigation-compose:2.7.5")
     implementation(platform(libs.compose.bom))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
