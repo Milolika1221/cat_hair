@@ -1,7 +1,9 @@
 from datetime import datetime
+from typing import List
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.annotation import Annotated
 
 from cat_server.api.schemas import (
     CatRecommendationsResponse,
@@ -34,8 +36,10 @@ async def create_session(
 
 @router.post("/{session_id}/{cat_id}/images", response_model=List[ImageUploadResponse])
 async def upload_images(
-    session_id: Optional[str],  # session_id передаётся в URL
-    cat_id : Optional[int] = 0,
+    session_id: str,  # session_id передаётся в URL
+    cat_id: Annotated[
+        int, Path(..., ge=0)
+    ],  # Основной тип параметра int; Path - доп метаданные (валидация), ge (greater or equal) не даст ввести неправильный id
     files: List[UploadFile] = File(..., max_files=5),
     user_session_service: UserSessionService = Depends(get_user_session_service),
     image_processing_service: ImageProcessingService = Depends(
@@ -71,7 +75,7 @@ async def upload_images(
     cat_repo = CatsRepository(db_session)
 
     #  cat_id: новый или существующий
-    if not cat_id or cat_id == 0:
+    if cat_id == 0:
         cat = await cat_repo.create()
         cat_id = cat.id
     else:
@@ -142,6 +146,3 @@ async def get_cat_recommendations(
         characteristics=proc_result.characteristics,
         processed_images=proc_result.processed_images,
     )
-
-
-
