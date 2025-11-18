@@ -264,7 +264,7 @@ class CatImagesRepository(ICatImagesRepository):
         try:
             stmt = select(CatImages).where(CatImages.cat_id == cat_id)
             result = await self.session.execute(stmt)
-            images = result.scalars().all()
+            images = list(result.scalars().all())
             logger.debug(f"Найдено {len(images)} изображений для cat_id={cat_id}")
             return images
         except Exception as e:
@@ -326,8 +326,10 @@ class CatCharacteristicsRepository(ICatCharacteristicsRepository):
         try:
             stmt = select(CatCharacteristics).where(CatCharacteristics.cat_id == cat_id)
             result = await self.session.execute(stmt)
-            characteristics = result.scalars().all()
-            logger.debug(f"Найдено {len(characteristics)} характеристик для cat_id={cat_id}")
+            characteristics = list(result.scalars().all())
+            logger.debug(
+                f"Найдено {len(characteristics)} характеристик для cat_id={cat_id}"
+            )
             return characteristics
         except Exception as e:
             logger.error(f"Ошибка при получении характеристик для cat_id={cat_id}: {e}")
@@ -390,8 +392,10 @@ class RecommendationRepository(IRecommendationRepository):
         try:
             stmt = select(Recommendations).where(Recommendations.cat_id == cat_id)
             result = await self.session.execute(stmt)
-            recommendations = result.scalars().all()
-            logger.debug(f"Найдено {len(recommendations)} рекомендаций для cat_id={cat_id}")
+            recommendations = list(result.scalars().all())
+            logger.debug(
+                f"Найдено {len(recommendations)} рекомендаций для cat_id={cat_id}"
+            )
             return recommendations
         except Exception as e:
             logger.error(f"Ошибка при получении рекомендаций для cat_id={cat_id}: {e}")
@@ -452,7 +456,7 @@ class ProcessingLogsRepository(IProcessingLogsRepository):
         try:
             stmt = select(ProcessingLogs).where(ProcessingLogs.cat_id == cat_id)
             result = await self.session.execute(stmt)
-            logs = result.scalars().all()
+            logs = list(result.scalars().all())
             logger.debug(f"Найдено {len(logs)} логов для cat_id={cat_id}")
             return logs
         except Exception as e:
@@ -512,7 +516,7 @@ class HaircutsRepository(IHaircutsRepository):
         try:
             stmt = select(Haircuts)
             result = await self.session.execute(stmt)
-            haircuts = result.scalars().all()
+            haircuts = list(result.scalars().all())
             logger.debug(f"Получено {len(haircuts)} стрижек")
             return haircuts
         except Exception as e:
@@ -543,7 +547,7 @@ class HaircutsRepository(IHaircutsRepository):
             # Получаем стрижки по списку ID
             haircut_stmt = select(Haircuts).where(Haircuts.id.in_(haircut_ids))
             haircut_result = await self.session.execute(haircut_stmt)
-            haircuts = haircut_result.scalars().all()
+            haircuts = list(haircut_result.scalars().all())
 
             logger.debug(
                 f"Найдено {len(haircuts)} стрижек по рекомендациям для cat_id={cat_id}"
