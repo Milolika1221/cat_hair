@@ -49,7 +49,7 @@ class ImageProcessingResponse(BaseModel):
     processing_type: str  # "enhanced", "segmented", "annotated"
 
     @classmethod
-    def from_cat_images(cls, cat_image: 'CatImages', processing_type: str):  # ✅ Новый метод
+    def from_cat_images(cls, cat_image: "ImageData", processing_type: str):
         return cls(
             file_name=cat_image.file_name,
             format=cat_image.format,
