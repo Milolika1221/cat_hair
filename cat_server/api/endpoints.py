@@ -1,9 +1,8 @@
 from datetime import datetime
-from typing import List
+from typing import List, Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql.annotation import Annotated
 
 from cat_server.api.schemas import (
     CatRecommendationsResponse,
