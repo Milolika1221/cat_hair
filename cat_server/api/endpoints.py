@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,7 +57,7 @@ async def upload_images(
         )
 
         image_data = ImageData(
-            file_name=file.filename,
+            file_name=file.filename,  # pyright: ignore[reportArgumentType]
             data=image_bytes,
             size=len(image_bytes),
             format=format,
@@ -76,7 +76,7 @@ async def upload_images(
     #  cat_id: новый или существующий
     if cat_id == 0:
         cat = await cat_repo.create()
-        cat_id = cat.id
+        cat_id = cat.id  # pyright: ignore[reportAssignmentType]
     else:
         cat = await cat_repo.get_by_id(cat_id)
         if cat is None:
