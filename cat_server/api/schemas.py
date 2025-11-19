@@ -1,6 +1,14 @@
 from pydantic import Field
 
-from cat_server.domain.dto import *
+from cat_server.domain.dto import (
+    AnalysisResult,
+    BaseModel,
+    HaircutRecommendation,
+    ImageProcessingResponse,
+    List,
+    Optional,
+    datetime,
+)
 
 
 #  API Request Schemas
