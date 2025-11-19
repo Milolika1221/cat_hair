@@ -1,10 +1,8 @@
-import pytest
-import aiohttp
-
-from PIL import  Image
 import io
 
-from cat_server.domain import ImageData
+import aiohttp
+import pytest
+from PIL import Image
 
 
 class TestFullFlow:
@@ -23,27 +21,25 @@ class TestFullFlow:
                 session_id = session_data["session_id"]
                 print(f"✅ Session created: {session_id}. {resp.text()}")
 
-            img = Image.new('RGB', (1920, 1080), color='red')
+            img = Image.new("RGB", (1920, 1080), color="red")
             img_bytes = io.BytesIO()
-            img.save(img_bytes, format='JPEG')
+            img.save(img_bytes, format="JPEG")
             img_bytes.seek(0)
-
 
             # 2. Загружаем тестовое изображение
 
             form_data = aiohttp.FormData()
             form_data.add_field(
-                'files',
+                "files",
                 value=img_bytes.getvalue(),
-                filename='test.jpg',
-                content_type='image/jpeg'
+                filename="test.jpg",
+                content_type="image/jpeg",
             )
 
             cat_id = 0
 
             async with session.post(
-                f"{base_url}/{session_id}/{cat_id}/images",
-                data=form_data
+                f"{base_url}/{session_id}/{cat_id}/images", data=form_data
             ) as resp:
                 error_detail = await resp.text()
                 print(f"❌ Ошибка: {resp.status}, детали: {error_detail}")
@@ -55,7 +51,9 @@ class TestFullFlow:
                 print("✅ Image uploaded")
 
             # 3. Запускаем обработку
-            async with session.get(f"{base_url}/{session_id}/{upload_result[0]['cat_id']}/recommendations") as resp:
+            async with session.get(
+                f"{base_url}/{session_id}/{upload_result[0]['cat_id']}/recommendations"
+            ) as resp:
                 assert resp.status == 200
                 process_result = await resp.json()
                 assert "cat_id" in process_result
@@ -68,4 +66,6 @@ class TestFullFlow:
                 assert resp.status == 200
                 recommendations = await resp.json()
                 assert "recommendations" in recommendations
-                print(f"✅ Recommendations received: {len(recommendations['recommendations'])}")
+                print(
+                    f"✅ Recommendations received: {len(recommendations['recommendations'])}"
+                )
