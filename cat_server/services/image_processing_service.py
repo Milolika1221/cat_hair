@@ -97,7 +97,7 @@ class NeuralNetworkClient:
 
     async def analyze_and_process_image(
         self, request: NeuralNetworkRequest
-    ) -> NeuralNetworkResponse | None:
+    ) -> NeuralNetworkResponse:
         logger.info(
             f"📤 Отправка запроса в нейросеть: session_id={request.session_id}, cat_id={request.cat_id}"
         )
@@ -142,7 +142,8 @@ class NeuralNetworkClient:
                         logger.debug(f"✅ Успешный ответ от нейросети: {response_data}")
                         return self._parse_success_response(response_data)
                     else:
-                        await self._handle_http_error(response)
+                        processing_error = await self._handle_http_error(response)
+                        raise ProcessingException(processing_error)
             except asyncio.TimeoutError:
                 logger.error("⏰ Таймаут при запросе к нейросети")
                 raise ProcessingException(
@@ -206,7 +207,7 @@ class NeuralNetworkClient:
         return result
 
     @staticmethod
-    async def _handle_http_error(response: aiohttp.ClientResponse):
+    async def _handle_http_error(response: aiohttp.ClientResponse) -> ProcessingError:
         error_text = await response.text()
         logger.warning(
             f"⚠️ Нейросеть вернула ошибку: статус {response.status}, текст: {error_text}"
@@ -226,14 +227,12 @@ class NeuralNetworkClient:
             response.status, ("NEURAL_API_UNKNOWN", "Неизвестная ошибка")
         )
 
-        raise ProcessingException(
-            ProcessingError(
-                error_id=error_id,
-                error_type="neural_api",
-                message=f"{default_message} (статус: {response.status})",
-                details=error_text[:500],
-                suggestions=NeuralNetworkClient._get_error_suggestions(response.status),
-            )
+        return ProcessingError(
+            error_id=error_id,
+            error_type="neural_api",
+            message=f"{default_message} (статус: {response.status})",
+            details=error_text[:500],
+            suggestions=NeuralNetworkClient._get_error_suggestions(response.status),
         )
 
     @staticmethod
@@ -343,6 +342,8 @@ class ImageProcessingService:
                 for res in nn_response.analysis_result
             ]
 
+            del characteristics
+
             logger.info("📦 Формирование ответа пользователю...")
             processed_responses = [
                 ImageProcessingResponse.from_cat_images(
@@ -451,7 +452,7 @@ class ImageProcessingService:
             file_name=image_data.file_name,
             file_path=file_path,
             file_size=image_data.size,
-            resolution=image_data.resolution,
+            resolution=image_data.resolution or "",
             format=image_data.format,
             uploaded_at=datetime.now(),
         )
@@ -472,7 +473,7 @@ class ImageProcessingService:
             file_name=image_data.file_name,
             file_path=file_path,
             file_size=image_data.size,
-            resolution=image_data.resolution,
+            resolution=image_data.resolution or "",
             format=image_data.format,
             uploaded_at=datetime.now(),
         )
