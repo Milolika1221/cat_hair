@@ -358,7 +358,7 @@ class ImageProcessingService:
 
             return ProcessingResult(
                 session_id=session_id,
-                cat_id=cat.id,
+                cat_id=cat.id,  # pyright: ignore[reportArgumentType]
                 characteristics=nn_response.analysis_result,
                 processed_images=processed_responses,
                 processing_time_ms=processing_time_ms,
@@ -411,10 +411,10 @@ class ImageProcessingService:
 
         characteristic_dto_list = [
             AnalysisResult(
-                color=characteristic.color,
-                hair_length=characteristic.hair_length,
-                confidence=characteristic.confidence_level,
-                analyzed_at=characteristic.analyzed_at,
+                color=characteristic.color,  # pyright: ignore[reportArgumentType]
+                hair_length=characteristic.hair_length,  # pyright: ignore[reportArgumentType]
+                confidence=characteristic.confidence_level,  # pyright: ignore[reportArgumentType]
+                analyzed_at=characteristic.analyzed_at,  # pyright: ignore[reportArgumentType]
             )
             for characteristic in characteristics
         ]
