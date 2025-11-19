@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cat_server.api.schemas import (
     CatRecommendationsResponse,
-    ImageData,
     ImageUploadResponse,
     SessionCreateResponse,
 )
@@ -16,7 +15,7 @@ from cat_server.core.dependencies import (
     get_recommendation_service,
     get_user_session_service,
 )
-from cat_server.domain import ProcessingException
+from cat_server.domain.dto import ImageData, ProcessingException
 from cat_server.infrastructure.repositories import CatsRepository
 from cat_server.services.image_processing_service import ImageProcessingService
 from cat_server.services.recommendation_service import RecommendationService

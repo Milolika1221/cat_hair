@@ -3,13 +3,15 @@ from typing import List
 
 from cat_server.api.schemas import (
     AnalysisResult,
-    AnalysisWithRecommendations,
     HaircutRecommendation,
+)
+from cat_server.domain.dto import (
+    AnalysisWithRecommendations,
     ProcessingError,
+    ProcessingException,
     RecommendationResult,
     ScoredHaircut,
 )
-from cat_server.domain import ProcessingException
 from cat_server.domain.interfaces import IRecommendationService
 from cat_server.infrastructure.repositories import (
     ICatCharacteristicsRepository,

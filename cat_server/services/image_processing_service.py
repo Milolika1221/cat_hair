@@ -13,16 +13,17 @@ import aiofiles
 import aiohttp
 from PIL import Image as PILImage
 
-from cat_server.api.schemas import (
+from cat_server.api.schemas import ImageProcessingResponse
+from cat_server.domain.dto import (
+    AnalysisResult,
     ImageData,
-    ImageProcessingResponse,
     NeuralNetworkRequest,
+    NeuralNetworkResponse,
     ProcessingError,
     ProcessingException,
     ProcessingResult,
     ValidationResult,
 )
-from cat_server.domain.dto import AnalysisResult, NeuralNetworkResponse
 from cat_server.infrastructure.repositories import (
     ICatCharacteristicsRepository,
     ICatImagesRepository,

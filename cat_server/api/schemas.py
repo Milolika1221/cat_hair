@@ -1,23 +1,13 @@
+from datetime import datetime
+from typing import List, Optional
+
 from pydantic import Field
 
 from cat_server.domain.dto import (
     AnalysisResult,
-    AnalysisWithRecommendations,
     BaseModel,
     HaircutRecommendation,
-    ImageData,
     ImageProcessingResponse,
-    List,
-    NeuralNetworkRequest,
-    NeuralNetworkResponse,
-    Optional,
-    ProcessingError,
-    ProcessingException,
-    ProcessingResult,
-    RecommendationResult,
-    ScoredHaircut,
-    ValidationResult,
-    datetime,
 )
 
 
