@@ -27,21 +27,6 @@ class Cats(Base):
     recommendations = relationship("Recommendations", back_populates="cats")
 
 
-class CatImages(Base):
-    __tablename__ = "CatImages"
-
-    id = Column("CatImageID", Integer, primary_key=True, autoincrement=True)
-    cat_id = Column("CatID", Integer, ForeignKey("Cats.CatID"), nullable=False)
-    file_name = Column("FileName", String)
-    file_path = Column("FilePath", String, nullable=False)
-    file_size = Column("FileSize", Integer)  # Размер в байтах
-    resolution = Column("Resolution", String)  # Разрешение фото
-    format = Column("Format", String)  # "JPEG", "PNG"
-    uploaded_at = Column("UploadedAt", DateTime, default=datetime.now)
-
-    cats = relationship("Cats", back_populates="cat_images")
-
-
 class CatCharacteristics(Base):
     __tablename__ = "CatCharacteristics"
 
@@ -80,6 +65,7 @@ class Haircuts(Base):
     # suitable_body_types = Column('SuitableBodyTypes', String)
     suitable_colors = Column("SuitableColors", String)
     suitable_hair_lengths = Column("SuitableHairLengths", String)
+    image_bytes = Column("ImageBytes", LargeBinary)
 
     recommendations = relationship("Recommendations", back_populates="haircuts")
 
