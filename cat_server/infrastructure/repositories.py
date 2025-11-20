@@ -68,7 +68,7 @@ class ICatCharacteristicsRepository(ABC):
         pass
 
 
-class IRecommendationRepository(ABC):
+class IRecommendationsRepository(ABC):
     @abstractmethod
     async def create(
         self,
@@ -99,11 +99,11 @@ class IHaircutsRepository(ABC):
     @abstractmethod
     async def create(
         self,
-        haircut_id: int,
         name: str,
         description: str,
         suitable_colors: str,
         suitable_hair_length: str,
+        image_bytes: bytes,
     ) -> Haircuts:
         pass
 
@@ -253,7 +253,7 @@ class CatCharacteristicsRepository(ICatCharacteristicsRepository):
         return True
 
 
-class RecommendationRepository(IRecommendationRepository):
+class RecommendationsRepository(IRecommendationsRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
         logger.debug("RecommendationRepository инициализирован")
@@ -386,20 +386,20 @@ class HaircutsRepository(IHaircutsRepository):
 
     async def create(
         self,
-        haircut_id: int,
         name: str,
         description: str,
         suitable_colors: str,
         suitable_hair_length: str,
+        image_bytes: bytes,
     ) -> Haircuts:
-        logger.debug(f"Создание стрижки с ID/рекомендацией: {haircut_id}")
         haircut = Haircuts(
-            id=haircut_id,
             name=name,
             description=description,
             suitable_colors=suitable_colors,
             suitable_hair_length=suitable_hair_length,
+            image_bytes=image_bytes,
         )
+        logger.debug(f"Создание стрижки с ID/рекомендацией: {haircut.id}")
         self.session.add(haircut)
         await self.session.commit()
         await self.session.refresh(haircut)
