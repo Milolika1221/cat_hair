@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cat_server.domain.entities import (
     CatCharacteristics,
-    CatImages,
     Cats,
     Haircuts,
     ProcessingLogs,
@@ -39,33 +38,6 @@ class ICatsRepository(ABC):
 
     @abstractmethod
     async def delete(self, cat_id: int) -> bool:
-        pass
-
-
-class ICatImagesRepository(ABC):
-    @abstractmethod
-    async def create(
-        self,
-        cat_id: int,
-        file_name: str,
-        file_path: str,
-        file_size: int,
-        resolution: str,
-        format: str,
-        uploaded_at: datetime,
-    ) -> CatImages:
-        pass
-
-    @abstractmethod
-    async def get_by_id(self, image_id: int) -> Optional[CatImages]:
-        pass
-
-    @abstractmethod
-    async def get_by_cat_id(self, cat_id: int) -> List[CatImages]:  # Всегда список
-        pass
-
-    @abstractmethod
-    async def delete(self, image_id: int) -> bool:
         pass
 
 
@@ -212,74 +184,6 @@ class CatsRepository(ICatsRepository):
         await self.session.delete(cat)
         await self.session.commit()
         logger.info(f"Кот с ID {cat_id} удален")
-        return True
-
-
-class CatImagesRepository(ICatImagesRepository):
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        logger.debug("CatImagesRepository инициализирован")
-
-    async def create(
-        self,
-        cat_id: int,
-        file_name: str,
-        file_path: str,
-        file_size: int,
-        resolution: str,
-        format: str,
-        uploaded_at: datetime,
-    ) -> CatImages:
-        logger.debug(
-            f"Создание записи изображения для cat_id={cat_id}, файл: {file_name}"
-        )
-        cat_image = CatImages(
-            cat_id=cat_id,
-            file_name=file_name,
-            file_path=file_path,
-            file_size=file_size,
-            resolution=resolution,
-            format=format,
-            uploaded_at=uploaded_at,
-        )
-        self.session.add(cat_image)
-        await self.session.commit()
-        await self.session.refresh(cat_image)
-        logger.info(
-            f"Изображение создано: ID={cat_image.id}, cat_id={cat_image.cat_id}"
-        )
-        return cat_image
-
-    async def get_by_id(self, image_id: int) -> Optional[CatImages]:
-        logger.debug(f"Получение изображения по ID: {image_id}")
-        image = await self.session.get(CatImages, image_id)
-        if image:
-            logger.debug(f"Изображение найдено: ID={image.id}")
-        else:
-            logger.warning(f"Изображение с ID {image_id} не найдено")
-        return image
-
-    async def get_by_cat_id(self, cat_id: int) -> List[CatImages]:
-        logger.debug(f"Получение изображений по cat_id: {cat_id}")
-        try:
-            stmt = select(CatImages).where(CatImages.cat_id == cat_id)
-            result = await self.session.execute(stmt)
-            images = list(result.scalars().all())
-            logger.debug(f"Найдено {len(images)} изображений для cat_id={cat_id}")
-            return images
-        except Exception as e:
-            logger.error(f"Ошибка при получении изображений для cat_id={cat_id}: {e}")
-            return []  # Возвращаем пустой список в случае ошибки
-
-    async def delete(self, image_id: int) -> bool:
-        logger.debug(f"Удаление изображения по ID: {image_id}")
-        image = await self.session.get(CatImages, image_id)
-        if not image:
-            logger.warning(f"Изображение с ID {image_id} не найдено для удаления")
-            return False
-        await self.session.delete(image)
-        await self.session.commit()
-        logger.info(f"Изображение с ID {image_id} удалено")
         return True
 
 
