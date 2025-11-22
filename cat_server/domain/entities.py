@@ -22,7 +22,6 @@ class Cats(Base):
     created_at = Column("CreatedAt", DateTime, default=datetime.now)
 
     processing_logs = relationship("ProcessingLogs", back_populates="cats")
-    cat_images = relationship("CatImages", back_populates="cats")
     cat_characteristics = relationship("CatCharacteristics", back_populates="cats")
     recommendations = relationship("Recommendations", back_populates="cats")
 
@@ -59,12 +58,9 @@ class Recommendations(Base):
 class Haircuts(Base):
     __tablename__ = "Haircuts"
 
-    id = Column("HaircutID", Integer, primary_key=True)
-    name = Column("Name", String)
+    id = Column("HaircutID", Integer, primary_key=True, autoincrement=True)
+    name = Column("Name", String, unique=True)
     description = Column("Description", String)
-    # suitable_body_types = Column('SuitableBodyTypes', String)
-    suitable_colors = Column("SuitableColors", String)
-    suitable_hair_lengths = Column("SuitableHairLengths", String)
     image_bytes = Column("ImageBytes", LargeBinary)
 
     recommendations = relationship("Recommendations", back_populates="haircuts")
