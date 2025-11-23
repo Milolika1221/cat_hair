@@ -1,25 +1,22 @@
 import base64
-
-# import json
 import logging
 import os
 import sys
+
+# import json
+from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 
 # Добавляем путь к проекту для импорта модулей
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cat_server.services.neural_service import neural_service
 
-app = FastAPI(title="Real Neural Network API", version="1.0.0")
-logger = logging.getLogger(__name__)
 
-
-@app.on_event("startup")
-async def startup_event():
-    # Инициализация нейросети при запуске сервера
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     logger.info("🧠 Инициализация нейросети...")
     success = await neural_service.initialize()
     if success:
@@ -27,18 +24,19 @@ async def startup_event():
     else:
         logger.error("❌ Не удалось загрузить нейросеть")
 
+    yield
+
+    logger.info(" Неросеть ушла спать")
+
+
+app = FastAPI(title="Real Neural Network API", version="1.0.0", lifespan=lifespan)
+logger = logging.getLogger(__name__)
+
 
 @app.post("/", summary="Обработка изображений нейросетью")
 async def process_images(
     image: UploadFile = File(..., description="Изображение кота"),
-    metadata: str = Form(..., description="Метаданные в формате JSON"),
 ):
-    # Парсим метаданные
-    # try:
-    # meta = json.loads(metadata)
-    # except json.JSONDecodeError:
-    # meta = {}
-
     # Проверяем что нейросеть загружена
     if not neural_service.is_loaded:
         raise HTTPException(status_code=500, detail="Нейросеть не загружена")
@@ -74,14 +72,12 @@ async def process_images(
         # Создаем обработанное изображение (можно вернуть оригинал или обработать)
         encoded_image = base64.b64encode(image_data).decode("utf-8")
 
-        processed_images = [
-            {
-                "filename": image.filename,
-                "data": encoded_image,
-                "format": "JPEG",
-                "resolution": "224x224",  # Размер который использует модель
-            }
-        ]
+        processed_image = {
+            "filename": image.filename,
+            "data": encoded_image,
+            "format": "JPEG",
+            "resolution": "224x224",  # Размер который использует модель
+        }
 
         response_data = {
             "success": True,
@@ -92,7 +88,7 @@ async def process_images(
                 "analysis_timestamp": datetime.now().isoformat(),
                 "predicted_class": top_prediction["class_name"],
             },
-            "processed_images": processed_images,
+            "processed_image": processed_image,
             "processing_time_ms": processing_time_ms,
             "processing_metadata": {
                 "stub": False,
