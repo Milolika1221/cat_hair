@@ -19,9 +19,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.delay
-import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,6 +46,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable("main") { MainScreen(navController) }
                         composable("instructions") { InstructionsScreen(navController) }
+                        composable("history") {HistoryScreen(navController)}
                         composable("photoSource") { PhotoSourceScreen(navController) }
                         composable("camera") { CameraScreen(navController) }
                         composable("gallery") { GalleryScreen(navController) }
@@ -91,6 +98,39 @@ fun MainScreen(navController: NavHostController) {
         Spacer(modifier = Modifier.height(80.dp))
 
         Button(
+            onClick = { navController.navigate("photoSource") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+        ) {
+            Text(
+                "ВЫБРАТЬ ФОТО",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { navController.navigate("history") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary
+            )
+        ) {
+            Text(
+                "ИСТОРИЯ",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
             onClick = { navController.navigate("instructions") },
             modifier = Modifier
                 .fillMaxWidth()
@@ -106,20 +146,7 @@ fun MainScreen(navController: NavHostController) {
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
-            onClick = { navController.navigate("photoSource") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-        ) {
-            Text(
-                "ВЫБРАТЬ ФОТО",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
-        }
     }
 }
 
@@ -131,12 +158,26 @@ fun InstructionsScreen(navController: NavHostController) {
             .fillMaxSize()
             .padding(24.dp)
     ) {
-        Text(
-            text = "Инструкция",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+        Box(
             modifier = Modifier.fillMaxWidth()
-        )
+        ) {
+            IconButton(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Назад"
+                )
+            }
+            Text(
+                text = "Инструкция",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -145,23 +186,6 @@ fun InstructionsScreen(navController: NavHostController) {
         InstructionItem("3. Выберите до 5 фото разных ракурсов")
         InstructionItem("4. Наш AI проанализирует тип шерсти и телосложение")
         InstructionItem("5. Получите рекомендации по стрижке")
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = { navController.navigate("photoSource") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("ПОНЯТНО")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(
-            onClick = { navController.popBackStack() }
-        ) {
-            Text("НАЗАД")
-        }
     }
 }
 
@@ -181,7 +205,102 @@ fun InstructionItem(text: String) {
     }
 }
 
-// ЭКРАН 3 - Выбор источника фото
+// ЭКРАН 3 - История
+@Composable
+fun HistoryScreen(navController: NavHostController) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Верхняя строка с кнопкой назад и заголовком
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Кнопка назад слева
+            IconButton(
+                onClick = { navController.popBackStack() }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Назад"
+                )
+            }
+
+            // Заголовок по центру
+            Text(
+                text = "История",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Список карточек истории
+        HistoryCard(
+            title = "Лев",
+            onClick = {
+                navController.navigate("recommendations")
+            }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        HistoryCard(
+            title = "Лев",
+            onClick = {
+                navController.navigate("recommendations")
+            }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun HistoryCard(
+    title: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Левая часть - фото
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(1f)
+                    .background(
+                        color = Color.Gray.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Фото", color = Color.Gray)// TODO: Вместо Text, там должна быть фотография
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(3f)
+            )
+        }
+    }
+}
+
+// ЭКРАН 4 - Выбор источника фото
 @Composable
 fun PhotoSourceScreen(navController: NavHostController) {
     Column(
@@ -191,59 +310,100 @@ fun PhotoSourceScreen(navController: NavHostController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "Выбор источника фото",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        Button(
-            onClick = { navController.navigate("camera") },
+        Box(
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("КАМЕРА", style = MaterialTheme.typography.bodyLarge)
+            IconButton(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Назад"
+                )
+            }
+
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = { navController.navigate("gallery") },
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text("ГАЛЕРЕЯ", style = MaterialTheme.typography.bodyLarge)
-        }
+            Text(
+                text = "Выбор источника фото",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
 
-        Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
-        TextButton(
-            onClick = { navController.popBackStack() }
-        ) {
-            Text("НАЗАД", style = MaterialTheme.typography.bodyMedium)
+            Button(
+                onClick = { navController.navigate("camera") },
+                modifier = Modifier.fillMaxWidth().height(56.dp)
+            ) {
+                Text("КАМЕРА",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { navController.navigate("gallery") },
+                modifier = Modifier.fillMaxWidth().height(56.dp)
+            ) {
+                Text("ГАЛЕРЕЯ",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium)
+            }
         }
     }
 }
 
-// ЭКРАН 4 - Камера
+
+// ЭКРАН 5 - Камера
 @Composable
 fun CameraScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+
     ) {
-        Text(
-            text = "Сфотографируйте кота",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Кнопка назад слева
+            IconButton(
+                onClick = { navController.popBackStack() }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Назад"
+                )
+            }
 
-        Spacer(modifier = Modifier.height(32.dp))
+            // Заголовок по центру (занимает оставшееся пространство)
+            Text(
+                text = "Сфотографируйте кота",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center
+            )
+            }
 
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -257,8 +417,8 @@ fun CameraScreen(navController: NavHostController) {
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = { navController.navigate("photoPreview") },
-            modifier = Modifier.fillMaxWidth()
+            onClick = { navController.navigate("photoPreview") }, /*TODO: Надо сделать переход на камеру, чтобы фотать кота*/
+            modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
             Text("СДЕЛАТЬ ФОТО")
         }
@@ -271,7 +431,7 @@ fun CameraScreen(navController: NavHostController) {
         ) {
             Button(
                 onClick = { /* TODO: Переснять фото */ },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary
                 )
@@ -281,23 +441,18 @@ fun CameraScreen(navController: NavHostController) {
 
             Button(
                 onClick = { navController.navigate("photoPreview") },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
                 Text("ИСПОЛЬЗОВАТЬ")
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(
-            onClick = { navController.popBackStack() }
-        ) {
-            Text("НАЗАД")
         }
     }
 }
 
-// ЭКРАН 5 - Галерея
+
+// ЭКРАН 6 - Галерея
 @Composable
 fun GalleryScreen(navController: NavHostController) {
     Column(
@@ -305,18 +460,31 @@ fun GalleryScreen(navController: NavHostController) {
             .fillMaxSize()
             .padding(24.dp)
     ) {
-        Text(
-            text = "Галерея",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
+        Box(
             modifier = Modifier.fillMaxWidth()
-        )
+        ) {
+            IconButton(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Назад"
+                )
+            }
+            Text(
+                text = "Галерея",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Выберите до 5 фото",
+            text = "Выберите фотографию кота",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
@@ -327,7 +495,7 @@ fun GalleryScreen(navController: NavHostController) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp),
+                .height(300.dp),
             contentAlignment = Alignment.Center
         ) {
             Text("Место для выбора фото", style = MaterialTheme.typography.bodyMedium)
@@ -337,23 +505,17 @@ fun GalleryScreen(navController: NavHostController) {
 
         Button(
             onClick = { navController.navigate("photoPreview") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text("ПОДТВЕРДИТЬ", style = MaterialTheme.typography.bodyLarge)
+            Text("ПОДТВЕРДИТЬ",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium)
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(
-            onClick = { navController.popBackStack() },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("НАЗАД", style = MaterialTheme.typography.bodyMedium)
-        }
     }
 }
 
-// ЭКРАН 6 - Предпросмотр фото
+// ЭКРАН 7 - Предпросмотр фото
 @Composable
 fun PhotoPreviewScreen(navController: NavHostController) {
     Column(
@@ -362,11 +524,28 @@ fun PhotoPreviewScreen(navController: NavHostController) {
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Предпросмотр фото",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ){
+            // Кнопка назад слева
+            IconButton(
+                onClick = { navController.popBackStack() }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Назад"
+                )
+            }
+            Text(
+                text = "Предпросмотр фото",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center
+            )
+        }
+
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -384,9 +563,10 @@ fun PhotoPreviewScreen(navController: NavHostController) {
 
         Button(
             onClick = { navController.navigate("analysis") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text("АНАЛИЗИРОВАТЬ")
+            Text("АНАЛИЗИРОВАТЬ", style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -394,12 +574,13 @@ fun PhotoPreviewScreen(navController: NavHostController) {
         TextButton(
             onClick = { navController.popBackStack() }
         ) {
-            Text("ВЫБРАТЬ ДРУГОЕ")
+            Text("ВЫБРАТЬ ДРУГОЕ", style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium)
         }
     }
 }
 
-// ЭКРАН 7 - Анализ (ИСПРАВЛЕННЫЙ)
+// ЭКРАН 8 - Анализ (ИСПРАВЛЕННЫЙ)
 @Composable
 fun AnalysisScreen(navController: NavHostController) {
     Column(
@@ -456,12 +637,14 @@ fun AnalysisScreen(navController: NavHostController) {
         TextButton(
             onClick = { navController.navigate("recommendations") }
         ) {
-            Text("Перейти к результатам")
+            Text("Перейти к результатам",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium)
         }
     }
 }
 
-// ЭКРАН 8 - Ошибка распознавания (тут то же кароче должна нейронка понимать будет ошибка или нет фикс нужен и ниже ещё 9 экран)
+// ЭКРАН 9 - Ошибка распознавания (тут то же кароче должна нейронка понимать будет ошибка или нет фикс нужен и ниже ещё 9 экран)
 @Composable
 fun RecognitionErrorScreen(navController: NavHostController) {
     Column(
@@ -509,7 +692,7 @@ fun RecognitionErrorScreen(navController: NavHostController) {
 
         Text(
             text = "Не удалось найти кота на фото",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.titleSmall,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -528,13 +711,13 @@ fun RecognitionErrorScreen(navController: NavHostController) {
             ) {
                 Text(
                     text = "Убедитесь, что:",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("• Кот хорошо виден", style = MaterialTheme.typography.bodySmall)
-                Text("• Освещение хорошее", style = MaterialTheme.typography.bodySmall)
-                Text("• Фото не размыто", style = MaterialTheme.typography.bodySmall)
+                Text("• Кот хорошо виден", style = MaterialTheme.typography.bodyLarge)
+                Text("• Освещение хорошее", style = MaterialTheme.typography.bodyLarge)
+                Text("• Фото не размыто", style = MaterialTheme.typography.bodyLarge)
             }
         }
 
@@ -551,9 +734,11 @@ fun RecognitionErrorScreen(navController: NavHostController) {
                         popUpTo("analysis") { inclusive = true }
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
-                Text("ПОВТОРИТЬ")
+                Text("ПОВТОРИТЬ",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -565,7 +750,9 @@ fun RecognitionErrorScreen(navController: NavHostController) {
                     }
                 }
             ) {
-                Text("ОТМЕНА")
+                Text("ОТМЕНА",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -583,28 +770,8 @@ fun RecommendationsScreen(navController: NavHostController) {/// тут фикс
         Text(
             text = "Рекомендации по стрижке",
             style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        RecommendationCard(
-            title = "Стрижка \"Лев\"",
-            description = "Идеально подходит для густых волос, добавляет объем и текстуру. Требует минимальной укладки и отлично смотрится на круглых и квадратных лицах."
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        RecommendationCard(
-            title = "Каре \"Боб\"",
-            description = "Классический вариант для тонких и средних волос. Придает аккуратный вид и легко укладывается. Прекрасно подходит для овальных и вытянутых лиц."
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        RecommendationCard(
-            title = "Пикси \"Дерзость\"",
-            description = "Смелый и стильный выбор для коротких волос. Подчеркивает черты лица, не требует сложного ухода и идеально подходит для треугольных и сердечкообразных лиц."
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -613,28 +780,50 @@ fun RecommendationsScreen(navController: NavHostController) {/// тут фикс
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Button(
-                onClick = {
-                    navController.navigate("main") {
-                        popUpTo("main") { inclusive = true }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text("ЗАВЕРШИТЬ")
+                Text("Фото", style = MaterialTheme.typography.bodyMedium)
             }
+            Spacer(modifier = Modifier.height(32.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+            RecommendationCard(
+                title = "Стрижка «Лев»",
+                description = "Идеально подходит для густых волос, добавляет объем и текстуру. Требует минимальной укладки и отлично смотрится на круглых и квадратных лицах."
+            )
 
-            TextButton(
-                onClick = {
-                    navController.navigate("photoSource") {
-                        popUpTo("main") { inclusive = false }
-                    }
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = {
+                navController.navigate("main") {
+                    popUpTo("main") { inclusive = true }
                 }
-            ) {
-                Text("НОВЫЙ АНАЛИЗ")
-            }
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) {
+            Text("ЗАВЕРШИТЬ",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium)
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        TextButton(
+            onClick = {
+                navController.navigate("photoSource") {
+                    popUpTo("main") { inclusive = false }
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) {
+            Text("НОВЫЙ АНАЛИЗ",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium)
         }
     }
 }
