@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean,
     Column,
     DateTime,
     Float,
@@ -10,6 +9,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 
 from cat_server.core.base import Base
@@ -33,9 +33,6 @@ class Recommendations(Base):
     haircut_id = Column(
         "HaircutID", Integer, ForeignKey("Haircuts.HaircutID"), nullable=False
     )
-    is_no_haircut_required = Column("IsNoHaircutRequired", Boolean)
-    reason = Column("Reason", String)
-    created_at = Column("CreatedAt", DateTime)
 
     cats = relationship("Cats", back_populates="recommendations")
     haircuts = relationship("Haircuts", back_populates="recommendations")
@@ -47,6 +44,7 @@ class Haircuts(Base):
     id = Column("HaircutID", Integer, primary_key=True, autoincrement=True)
     name = Column("Name", String, unique=True)
     description = Column("Description", String)
+    reasons = Column("Reasons", ARRAY(String))
     image_bytes = Column("ImageBytes", LargeBinary)
 
     recommendations = relationship("Recommendations", back_populates="haircuts")
