@@ -22,21 +22,7 @@ class Cats(Base):
     created_at = Column("CreatedAt", DateTime, default=datetime.now)
 
     processing_logs = relationship("ProcessingLogs", back_populates="cats")
-    cat_characteristics = relationship("CatCharacteristics", back_populates="cats")
     recommendations = relationship("Recommendations", back_populates="cats")
-
-
-class CatCharacteristics(Base):
-    __tablename__ = "CatCharacteristics"
-
-    id = Column("CharacteristicID", Integer, primary_key=True, autoincrement=True)
-    cat_id = Column("CatID", Integer, ForeignKey("Cats.CatID"), nullable=False)
-    color = Column("Color", String)
-    hair_length = Column("HairLength", String)
-    confidence_level = Column("ConfidenceLevel", Float)
-    analyzed_at = Column("AnalyzedAt", DateTime, default=datetime.now)
-
-    cats = relationship("Cats", back_populates="cat_characteristics")
 
 
 class Recommendations(Base):
