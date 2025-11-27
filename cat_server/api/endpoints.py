@@ -16,6 +16,7 @@ from cat_server.core.dependencies import (
     get_user_session_service,
 )
 from cat_server.domain.dto import ImageData, ProcessingException
+from cat_server.infrastructure import HaircutsRepository
 from cat_server.infrastructure.repositories import CatsRepository
 from cat_server.services.image_processing_service import ImageProcessingService
 from cat_server.services.user_session_service import UserSessionService
@@ -77,6 +78,15 @@ async def upload_images(
         cat = await cat_repo.get_by_id(cat_id)
         if cat is None:
             raise HTTPException(status_code=404, detail="Cat not found")
+        await user_session_service.link_cat_to_session(session_id, cat_id)
+        haircut_repo = HaircutsRepository(db_session)
+        haircut = await haircut_repo.get_by_cat_id(cat_id)
+        return ImageUploadResponse(
+            cat_id=cat_id,
+            session_id=session_id,
+            file_name=f"{haircut.name}.jpg" if haircut is not None else "unknown.jpg",  # pyright: ignore[reportAttributeAccessIssue]
+            upload_timestamp=datetime.now().timestamp() - start_time.timestamp(),
+        )
 
     await user_session_service.link_cat_to_session(session_id, cat_id)
 
