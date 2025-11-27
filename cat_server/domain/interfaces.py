@@ -1,7 +1,13 @@
-from typing import List
 from abc import ABC, abstractmethod
+from typing import List
 
-from cat_server.domain.dto import ImageData, ProcessingResult, RecommendationResult, SessionData, ValidationResult
+from cat_server.domain.dto import (
+    ImageData,
+    ProcessingResult,
+    RecommendationResult,
+    SessionData,
+    ValidationResult,
+)
 
 
 class IUserSessionService(ABC):
@@ -10,20 +16,29 @@ class IUserSessionService(ABC):
         pass
 
     @abstractmethod
+    async def link_cat_to_session(self, session_id: str, cat_id: int) -> bool:
+        pass
+
+    @abstractmethod
     async def get_session(self, session_id: str) -> SessionData:
         pass
 
     @abstractmethod
-    async def add_images_to_session(self, session_id: str, images_data: List[ImageData]) -> bool:
+    async def add_image_to_session(
+        self, session_id: str, image_data: ImageData
+    ) -> bool:
         pass
 
     @abstractmethod
     async def delete_session(self, session_id: str) -> bool:
         pass
 
+
 class IImageProcessingService(ABC):
     @abstractmethod
-    async def process_images(self, session_id: str, cat_id : int, images_data : List[ImageData]) -> ProcessingResult:
+    async def process_images(
+        self, session_id: str, cat_id: int, images_data: List[ImageData]
+    ) -> ProcessingResult:
         pass
 
     @abstractmethod
@@ -31,12 +46,13 @@ class IImageProcessingService(ABC):
         pass
 
     @abstractmethod
-    async def get_processing_result(self, session_id : str, cat_id : int) -> ProcessingResult:
+    async def get_processing_result(
+        self, session_id: str, cat_id: int
+    ) -> ProcessingResult:
         pass
+
 
 class IRecommendationService(ABC):
     @abstractmethod
     async def get_recommendations(self, cat_id: int) -> RecommendationResult:
         pass
-
-

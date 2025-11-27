@@ -1,24 +1,25 @@
 # cat_server/infrastructure/repositories.py
 
-# cat_server/infrastructure/repositories.py
-
 import logging
 from abc import ABC, abstractmethod
-from sqlalchemy import select, delete
-from sqlalchemy.orm import selectinload
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional, Union
 from datetime import datetime
+from typing import List, Optional
 
-from cat_server.domain.entities import (CatImages, Cats, CatCharacteristics,
-                                        Recommendations, ProcessingLogs, Haircuts)
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from cat_server.infrastructure.entities import (
+    Cats,
+    Haircuts,
+    ProcessingLogs,
+    Recommendations,
+)
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
 
 # --- Интерфейсы (Contracts) ---
-
 class ICatsRepository(ABC):
     @abstractmethod
     async def create(self) -> Cats:
@@ -33,59 +34,11 @@ class ICatsRepository(ABC):
         pass
 
 
-class ICatImagesRepository(ABC):
+class IRecommendationsRepository(ABC):
     @abstractmethod
-    async def create(self,
-                     cat_id: int,
-                     file_name: str,
-                     file_path: str,
-                     file_size: int,
-                     resolution: str,
-                     format: str,
-                     uploaded_at: datetime) -> CatImages:
-        pass
-
-    @abstractmethod
-    async def get_by_id(self, image_id: int) -> Optional[CatImages]:
-        pass
-
-    @abstractmethod
-    async def get_by_cat_id(self, cat_id: int) -> List[CatImages]:  # Всегда список
-        pass
-
-    @abstractmethod
-    async def delete(self, image_id: int) -> bool:
-        pass
-
-
-class ICatCharacteristicsRepository(ABC):
-    @abstractmethod
-    async def create(self,
-                     cat_id: int,
-                     color: str,
-                     hair_length: str,
-                     confidence_level: float,
-                     analyzed_at: datetime) -> CatCharacteristics:
-        pass
-
-    @abstractmethod
-    async def get_by_id(self, characteristic_id: int) -> Optional[CatCharacteristics]:
-        pass
-
-    @abstractmethod
-    async def get_by_cat_id(self, cat_id: int) -> List[CatCharacteristics]:  # Всегда список
-        pass
-
-    @abstractmethod
-    async def delete(self, characteristic_id: int) -> bool:
-        pass
-
-
-class IRecommendationRepository(ABC):
-    @abstractmethod
-    async def create(self, cat_id: int, haircut_id: int,
-                     is_no_haircut_required: bool, reason: str,
-                     created_at: datetime) -> Recommendations:
+    async def create(
+        self, cat_id: int, haircut: int | str, confidence: float
+    ) -> Recommendations:
         pass
 
     @abstractmethod
@@ -93,7 +46,13 @@ class IRecommendationRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_cat_id(self, cat_id: int) -> List[Recommendations]:  # Всегда список
+    async def get_by_cat_id(self, cat_id: int) -> Recommendations | None:
+        pass
+
+    @abstractmethod
+    async def get_by_cat_id_and_haircut(
+        self, cat_id: int, haircut: int | str
+    ) -> Recommendations | None:
         pass
 
     @abstractmethod
@@ -102,9 +61,16 @@ class IRecommendationRepository(ABC):
 
 
 class IHaircutsRepository(ABC):
+    def __init__(self) -> None:
+        pass
+
     @abstractmethod
-    async def create(self, recommendation_id: int, name: str, description: str,
-                     suitable_colors: str, suitable_hair_length: str) -> Haircuts:
+    async def create(
+        self,
+        name: str,
+        description: str,
+        image_bytes: bytes,
+    ) -> Haircuts:
         pass
 
     @abstractmethod
@@ -112,11 +78,15 @@ class IHaircutsRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_all_by_recommendations(self, cat_id: int) -> List[Haircuts]:
+    async def get_by_id(self, haircut_id: int) -> Optional[Haircuts]:
         pass
 
     @abstractmethod
-    async def get_by_id(self, haircut_id: int) -> Optional[Haircuts]:
+    async def get_by_cat_id(self, cat_id: int) -> Haircuts:
+        pass
+
+    @abstractmethod
+    async def get_by_haircut_name(self, name: str) -> Optional[Haircuts]:
         pass
 
     @abstractmethod
@@ -126,9 +96,14 @@ class IHaircutsRepository(ABC):
 
 class IProcessingLogsRepository(ABC):
     @abstractmethod
-    async def create(self, cat_id: int, processing_time: float,
-                     status: str, error_message: Optional[str],
-                     processed_at: datetime) -> ProcessingLogs:
+    async def create(
+        self,
+        cat_id: int,
+        processing_time: float,
+        status: str,
+        error_message: Optional[str],
+        processed_at: datetime,
+    ) -> ProcessingLogs:
         pass
 
     @abstractmethod
@@ -145,6 +120,7 @@ class IProcessingLogsRepository(ABC):
 
 
 # --- Реализации (Implementations) ---
+
 
 class CatsRepository(ICatsRepository):
     def __init__(self, session: AsyncSession):
@@ -181,202 +157,91 @@ class CatsRepository(ICatsRepository):
         return True
 
 
-class CatImagesRepository(ICatImagesRepository):
+class RecommendationsRepository(IRecommendationsRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
-        logger.debug("CatImagesRepository инициализирован")
 
-    async def create(self,
-                     cat_id: int,
-                     file_name: str,
-                     file_path: str,
-                     file_size: int,
-                     resolution: str,
-                     format: str,
-                     uploaded_at: datetime) -> CatImages:
-        logger.debug(f"Создание записи изображения для cat_id={cat_id}, файл: {file_name}")
-        cat_image = CatImages(
-            cat_id=cat_id,
-            file_name=file_name,
-            file_path=file_path,
-            file_size=file_size,
-            resolution=resolution,
-            format=format,
-            uploaded_at=uploaded_at
-        )
-        self.session.add(cat_image)
-        await self.session.commit()
-        await self.session.refresh(cat_image)
-        logger.info(f"Изображение создано: ID={cat_image.id}, cat_id={cat_image.cat_id}")
-        return cat_image
-
-    async def get_by_id(self, image_id: int) -> Optional[CatImages]:
-        logger.debug(f"Получение изображения по ID: {image_id}")
-        image = await self.session.get(CatImages, image_id)
-        if image:
-            logger.debug(f"Изображение найдено: ID={image.id}")
+    async def create(
+        self, cat_id: int, haircut: int | str, confidence: float
+    ) -> Recommendations:
+        haircut_id = None
+        if isinstance(haircut, str):
+            haircut_id = select(Haircuts.id).where(Haircuts.name == haircut)
         else:
-            logger.warning(f"Изображение с ID {image_id} не найдено")
-        return image
-
-    async def get_by_cat_id(self, cat_id: int) -> List[CatImages]:
-        logger.debug(f"Получение изображений по cat_id: {cat_id}")
-        try:
-            stmt = select(CatImages).where(CatImages.cat_id == cat_id)
-            result = await self.session.execute(stmt)
-            images = result.scalars().all()
-            logger.debug(f"Найдено {len(images)} изображений для cat_id={cat_id}")
-            return images
-        except Exception as e:
-            logger.error(f"Ошибка при получении изображений для cat_id={cat_id}: {e}")
-            return []  # Возвращаем пустой список в случае ошибки
-
-    async def delete(self, image_id: int) -> bool:
-        logger.debug(f"Удаление изображения по ID: {image_id}")
-        image = await self.session.get(CatImages, image_id)
-        if not image:
-            logger.warning(f"Изображение с ID {image_id} не найдено для удаления")
-            return False
-        await self.session.delete(image)
-        await self.session.commit()
-        logger.info(f"Изображение с ID {image_id} удалено")
-        return True
-
-
-class CatCharacteristicsRepository(ICatCharacteristicsRepository):
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        logger.debug("CatCharacteristicsRepository инициализирован")
-
-    async def create(self,
-                     cat_id: int,
-                     color: str,
-                     hair_length: str,
-                     confidence_level: float,
-                     analyzed_at: datetime) -> CatCharacteristics:
-        logger.debug(f"Создание характеристики для cat_id={cat_id}")
-        characteristic = CatCharacteristics(
-            cat_id=cat_id,
-            color=color,
-            hair_length=hair_length,
-            confidence_level=confidence_level,
-            analyzed_at=analyzed_at
-        )
-        self.session.add(characteristic)
-        await self.session.commit()
-        await self.session.refresh(characteristic)
-        logger.info(f"Характеристика создана: ID={characteristic.id}, cat_id={characteristic.cat_id}")
-        return characteristic
-
-    async def get_by_id(self, characteristic_id: int) -> Optional[CatCharacteristics]:
-        logger.debug(f"Получение характеристики по ID: {characteristic_id}")
-        characteristic = await self.session.get(CatCharacteristics, characteristic_id)
-        if characteristic:
-            logger.debug(f"Характеристика найдена: ID={characteristic.id}")
-        else:
-            logger.warning(f"Характеристика с ID {characteristic_id} не найдена")
-        return characteristic
-
-    async def get_by_cat_id(self, cat_id: int) -> List[CatCharacteristics]:
-        logger.debug(f"Получение характеристик по cat_id: {cat_id}")
-        try:
-            stmt = select(CatCharacteristics).where(CatCharacteristics.cat_id == cat_id)
-            result = await self.session.execute(stmt)
-            characteristics = result.scalars().all()
-            logger.debug(f"Найдено {len(characteristics)} характеристик для cat_id={cat_id}")
-            return characteristics
-        except Exception as e:
-            logger.error(f"Ошибка при получении характеристик для cat_id={cat_id}: {e}")
-            return []
-
-    async def delete(self, characteristic_id: int) -> bool:
-        logger.debug(f"Удаление характеристики по ID: {characteristic_id}")
-        characteristic = await self.session.get(CatCharacteristics, characteristic_id)
-        if not characteristic:
-            logger.warning(f"Характеристика с ID {characteristic_id} не найдена для удаления")
-            return False
-        await self.session.delete(characteristic)
-        await self.session.commit()
-        logger.info(f"Характеристика с ID {characteristic_id} удалена")
-        return True
-
-
-class RecommendationRepository(IRecommendationRepository):
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        logger.debug("RecommendationRepository инициализирован")
-
-    async def create(self,
-                     cat_id: int,
-                     haircut_id: int,
-                     is_no_haircut_required: bool,
-                     reason: str,
-                     created_at: datetime) -> Recommendations:
-        logger.debug(f"Создание рекомендации для cat_id={cat_id}")
+            haircut_id = haircut
         recommendation = Recommendations(
-            cat_id=cat_id,
-            haircut_id=haircut_id,
-            is_no_haircut_required=is_no_haircut_required,
-            reason=reason,
-            created_at=created_at
+            cat_id=cat_id, haircut_id=haircut_id, confidence=confidence
         )
         self.session.add(recommendation)
         await self.session.commit()
         await self.session.refresh(recommendation)
-        logger.info(f"Рекомендация создана: ID={recommendation.id}, cat_id={recommendation.cat_id}")
         return recommendation
 
     async def get_by_id(self, recommendation_id: int) -> Optional[Recommendations]:
         logger.debug(f"Получение рекомендации по ID: {recommendation_id}")
         recommendation = await self.session.get(Recommendations, recommendation_id)
-        if recommendation:
-            logger.debug(f"Рекомендация найдена: ID={recommendation.id}")
-        else:
-            logger.warning(f"Рекомендация с ID {recommendation_id} не найдена")
         return recommendation
 
-    async def get_by_cat_id(self, cat_id: int) -> List[Recommendations]:
-        logger.debug(f"Получение рекомендаций по cat_id: {cat_id}")
+    async def get_by_cat_id(self, cat_id: int) -> Recommendations | None:
+        result = await self.session.execute(
+            select(Recommendations).where(Recommendations.cat_id == cat_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_cat_id_and_haircut(
+        self, cat_id: int, haircut: int | str
+    ) -> Recommendations | None:
         try:
-            stmt = select(Recommendations).where(Recommendations.cat_id == cat_id)
+            if isinstance(haircut, int):
+                stmt = select(Recommendations).where(
+                    Recommendations.cat_id == cat_id,
+                    Recommendations.haircut_id == haircut,
+                )
+            else:
+                stmt = select(Recommendations).where(
+                    Recommendations.cat_id == cat_id,
+                    Recommendations.haircut_id == Haircuts.get_id_by_name(haircut),
+                )
             result = await self.session.execute(stmt)
-            recommendations = result.scalars().all()
-            logger.debug(f"Найдено {len(recommendations)} рекомендаций для cat_id={cat_id}")
-            return recommendations
+            recommendation = result.scalar_one_or_none()
+            return recommendation
         except Exception as e:
-            logger.error(f"Ошибка при получении рекомендаций для cat_id={cat_id}: {e}")
-            return []
+            logger.error(
+                f"Ошибка при получении рекомендации для cat_id={cat_id} и haircut={haircut}: {e}"
+            )
+            return None
 
     async def delete(self, recommendation_id: int) -> bool:
-        logger.debug(f"Удаление рекомендации по ID: {recommendation_id}")
         recommendation = await self.session.get(Recommendations, recommendation_id)
         if not recommendation:
-            logger.warning(f"Рекомендация с ID {recommendation_id} не найдена для удаления")
+            logger.warning(
+                f"Рекомендация с ID {recommendation_id} не найдена для удаления"
+            )
             return False
         await self.session.delete(recommendation)
         await self.session.commit()
-        logger.info(f"Рекомендация с ID {recommendation_id} удалена")
         return True
 
 
 class ProcessingLogsRepository(IProcessingLogsRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
-        logger.debug("ProcessingLogsRepository инициализирован")
 
-    async def create(self,
-                     cat_id: int,
-                     processing_time: float,
-                     status: str,
-                     error_message: Optional[str],
-                     processed_at: datetime) -> ProcessingLogs:
+    async def create(
+        self,
+        cat_id: int,
+        processing_time: float,
+        status: str,
+        error_message: Optional[str],
+        processed_at: datetime,
+    ) -> ProcessingLogs:
         logger.debug(f"Создание лога обработки для cat_id={cat_id}")
         log = ProcessingLogs(
             cat_id=cat_id,
             processing_time=processing_time,
             status=status,
             error_message=error_message,
-            processed_at=processed_at
+            processed_at=processed_at,
         )
         self.session.add(log)
         await self.session.commit()
@@ -398,7 +263,7 @@ class ProcessingLogsRepository(IProcessingLogsRepository):
         try:
             stmt = select(ProcessingLogs).where(ProcessingLogs.cat_id == cat_id)
             result = await self.session.execute(stmt)
-            logs = result.scalars().all()
+            logs = list(result.scalars().all())
             logger.debug(f"Найдено {len(logs)} логов для cat_id={cat_id}")
             return logs
         except Exception as e:
@@ -422,20 +287,18 @@ class HaircutsRepository(IHaircutsRepository):
         self.session = session
         logger.debug("HaircutsRepository инициализирован")
 
-    async def create(self,
-                     haircut_id: int,
-                     name: str,
-                     description: str,
-                     suitable_colors: str,
-                     suitable_hair_length: str) -> Haircuts:
-        logger.debug(f"Создание стрижки с ID/рекомендацией: {haircut_id}")
+    async def create(
+        self,
+        name: str,
+        description: str,
+        image_bytes: bytes,
+    ) -> Haircuts:
         haircut = Haircuts(
-            id=haircut_id,
             name=name,
             description=description,
-            suitable_colors=suitable_colors,
-            suitable_hair_length=suitable_hair_length
+            image_bytes=image_bytes,
         )
+        logger.debug(f"Создание стрижки с ID/рекомендацией: {haircut.id}")
         self.session.add(haircut)
         await self.session.commit()
         await self.session.refresh(haircut)
@@ -456,14 +319,14 @@ class HaircutsRepository(IHaircutsRepository):
         try:
             stmt = select(Haircuts)
             result = await self.session.execute(stmt)
-            haircuts = result.scalars().all()
+            haircuts = list(result.scalars().all())
             logger.debug(f"Получено {len(haircuts)} стрижек")
             return haircuts
         except Exception as e:
             logger.error(f"Ошибка при получении всех стрижек: {e}")
             return []
 
-    async def get_all_by_recommendations(self, cat_id: int) -> List[Haircuts]:
+    async def get_all_by_haircuts(self, cat_id: int) -> List[Haircuts]:
         logger.debug(f"Получение стрижек по рекомендациям для cat_id: {cat_id}")
         try:
             # Получаем рекомендации для кота
@@ -475,22 +338,49 @@ class HaircutsRepository(IHaircutsRepository):
                 logger.warning(f"Рекомендации для cat_id={cat_id} не найдены")
                 return []
 
-            haircut_ids = [rec.haircut_id for rec in recommendations if rec.haircut_id]
+            haircut_ids = [
+                rec.haircut_id for rec in recommendations if rec.haircut_id is not None
+            ]
             if not haircut_ids:
-                logger.warning(f"Рекомендации для cat_id={cat_id} не содержат действительных haircut_id")
+                logger.warning(
+                    f"Рекомендации для cat_id={cat_id} не содержат действительных haircut_id"
+                )
                 return []
 
             # Получаем стрижки по списку ID
             haircut_stmt = select(Haircuts).where(Haircuts.id.in_(haircut_ids))
             haircut_result = await self.session.execute(haircut_stmt)
-            haircuts = haircut_result.scalars().all()
+            haircuts = list(haircut_result.scalars().all())
 
-            logger.debug(f"Найдено {len(haircuts)} стрижек по рекомендациям для cat_id={cat_id}")
+            logger.debug(
+                f"Найдено {len(haircuts)} стрижек по рекомендациям для cat_id={cat_id}"
+            )
             return haircuts
 
         except Exception as e:
-            logger.error(f"Ошибка при получении стрижек по рекомендациям для cat_id={cat_id}: {e}")
+            logger.error(
+                f"Ошибка при получении стрижек по рекомендациям для cat_id={cat_id}: {e}"
+            )
             return []
+
+    async def get_by_cat_id(self, cat_id: int) -> Haircuts | None:
+        stmt = (
+            select(Haircuts)
+            .join(Recommendations)
+            .where(
+                Recommendations.cat_id == cat_id
+                and Recommendations.haircut_id == Haircuts.id
+            )
+        )
+        result = await self.session.execute(stmt)
+
+        haircut = result.scalar_one_or_none()
+        return haircut
+
+    async def get_by_haircut_name(self, name: str) -> Optional[Haircuts]:
+        stmt = select(Haircuts).where(Haircuts.name == name)
+        result = await self.session.execute(stmt)
+        return result.scalar()
 
     async def delete(self, haircut_id: int) -> bool:
         logger.debug(f"Удаление стрижки по ID: {haircut_id}")

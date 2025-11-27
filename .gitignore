@@ -1,1 +1,5 @@
 .vscode/settings.json
+.idea/
+.gitignore
+__pycache__
+uploads/

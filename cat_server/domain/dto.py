@@ -1,6 +1,5 @@
-import base64
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -14,17 +13,20 @@ class ImageData(BaseModel):
     uploaded_at: Optional[datetime] = None
     is_processed: Optional[bool] = False
 
+
 class SessionData(BaseModel):
     session_id: str
     created_at: datetime
-    images: List['ImageData']
+    image: ImageData | None
+    cat_id: Optional[int] = None
     status: str  # 'active', 'processing', 'completed', 'error'
 
+
 class AnalysisResult(BaseModel):
-    color: str
-    hair_length: str
     confidence: float  # 0.0-1.0
     analyzed_at: datetime
+    predicted_class: str
+
 
 class ProcessingError(BaseModel):
     error_id: str
@@ -33,8 +35,9 @@ class ProcessingError(BaseModel):
     details: Optional[str] = None
     suggestions: Optional[List[str]] = []
 
+
 class ProcessingException(Exception):
-    def __init__(self, error : ProcessingError):
+    def __init__(self, error: ProcessingError):
         super().__init__(error.message)
         self.error = error
 
@@ -46,59 +49,62 @@ class ImageProcessingResponse(BaseModel):
     processing_type: str  # "enhanced", "segmented", "annotated"
 
     @classmethod
-    def from_cat_images(cls, cat_image: 'CatImages', processing_type: str):  # ✅ Новый метод
+    def from_cat_images(cls, cat_image: "ImageData", processing_type: str):
         return cls(
             file_name=cat_image.file_name,
             format=cat_image.format,
             resolution=cat_image.resolution or "unknown",
-            processing_type=processing_type
+            processing_type=processing_type,
         )
+
 
 class ProcessingResult(BaseModel):
     session_id: str
     cat_id: int
-    characteristics: List['AnalysisResult'] = None
-    processed_images: List[ImageProcessingResponse]  # Для ответа пользователю
+    analysis_result: AnalysisResult | str = "nothing"
     processing_time_ms: int
     status: str
-    error: Optional['ProcessingError'] = None
+    error: Optional["ProcessingError"]
+
 
 class ValidationResult(BaseModel):
     is_valid: bool
-    errors: List['ProcessingError']
+    errors: List["ProcessingError"]
+
 
 # GET/POST из веб-сервиса ИИ
 class NeuralNetworkRequest(BaseModel):
     session_id: str
     cat_id: int
-    images: List['ImageData']
+    image: "ImageData"
     processing_type: str = "analysis"  # "analysis", "enhancement", "segmentation"
 
+
 class NeuralNetworkResponse(BaseModel):
-    analysis_result: List['AnalysisResult']
-    processed_images: List['ImageData']
+    analysis_result: "AnalysisResult"
+    processed_image: "ImageData"
     processing_time_ms: int
     processing_metadata: Dict[str, Any]
+
 
 class HaircutRecommendation(BaseModel):
     haircut_name: str
     haircut_description: str
-    suitability_reason: str
-    is_no_haircut_required: bool
+
 
 class ScoredHaircut(BaseModel):
     haircut_id: int
-    haircut_name: str  # или как у тебя называется модель стрижки
-    score: float
+    haircut_name: str
+    confidence: float
     match_reasons: List[str]
-    confidence: bool  # или убери, если не используется
+
 
 class AnalysisWithRecommendations(BaseModel):
     analysis_result: AnalysisResult
     recommendations: List[ScoredHaircut]
 
+
 class RecommendationResult(BaseModel):
     cat_id: int
-    recommendations: List['HaircutRecommendation']
-    processing_steps: List[str]
+    recommendations: List["HaircutRecommendation"]
     total_processing_time: int

@@ -1,15 +1,21 @@
-from .repositories import CatsRepository, CatImagesRepository, CatCharacteristicsRepository, HaircutsRepository, RecommendationRepository, ICatsRepository,ICatCharacteristicsRepository,ICatImagesRepository,IHaircutsRepository, IRecommendationRepository
-
+from .entities import Cats, Haircuts, Recommendations
+from .repositories import (
+    CatsRepository,
+    HaircutsRepository,
+    ICatsRepository,
+    IHaircutsRepository,
+    IRecommendationsRepository,
+    RecommendationsRepository,
+)
 
 __all__ = [
-    'CatsRepository',
-    'CatImagesRepository',
-    'CatCharacteristicsRepository', 
-    'HaircutsRepository',
-    'RecommendationRepository',
-    'ICatsRepository',
-    'ICatCharacteristicsRepository',
-    'ICatImagesRepository',
-    'IHaircutsRepository',
-    'IRecommendationRepository'
+    "CatsRepository",
+    "HaircutsRepository",
+    "RecommendationsRepository",
+    "ICatsRepository",
+    "IHaircutsRepository",
+    "IRecommendationsRepository",
+    "Cats",
+    "Haircuts",
+    "Recommendations",
 ]
