@@ -1,19 +1,14 @@
 # cat_server/infrastructure/repositories.py
 
-# cat_server/infrastructure/repositories.py
-
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import select
-
-# from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cat_server.domain.entities import (
-    CatCharacteristics,
+from cat_server.infrastructure.entities import (
     Cats,
     Haircuts,
     ProcessingLogs,
@@ -25,8 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 # --- Интерфейсы (Contracts) ---
-
-
 class ICatsRepository(ABC):
     @abstractmethod
     async def create(self) -> Cats:
