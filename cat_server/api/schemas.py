@@ -1,13 +1,11 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import Field
 
 from cat_server.domain.dto import (
-    AnalysisResult,
     BaseModel,
     HaircutRecommendation,
-    ImageProcessingResponse,
 )
 
 
@@ -46,9 +44,8 @@ class CatProcessingStatusResponse(BaseModel):
 
 class CatRecommendationsResponse(BaseModel):
     cat_id: int
-    recommendations: List["HaircutRecommendation"]
-    characteristics: Optional[List["AnalysisResult"]] = None
-    processed_images: Optional[List["ImageProcessingResponse"]] = None
+    image: str
+    recommendation: "HaircutRecommendation"
 
 
 class SessionCreateResponse(BaseModel):
