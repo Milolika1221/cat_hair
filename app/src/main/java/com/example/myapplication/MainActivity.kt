@@ -26,8 +26,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.delay
+import androidx.camera.view.PreviewView
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.accompanist.permissions.rememberPermissionState
+import android.Manifest
+import android.graphics.Bitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -306,78 +321,13 @@ fun PhotoSourceScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(24.dp)
     ) {
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            IconButton(
-                onClick = { navController.popBackStack() },
-                modifier = Modifier.align(Alignment.CenterStart)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Назад"
-                )
-            }
-
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Выбор источника фото",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            Button(
-                onClick = { navController.navigate("camera") },
-                modifier = Modifier.fillMaxWidth().height(56.dp)
-            ) {
-                Text("КАМЕРА",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { navController.navigate("gallery") },
-                modifier = Modifier.fillMaxWidth().height(56.dp)
-            ) {
-                Text("ГАЛЕРЕЯ",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium)
-            }
-        }
-    }
-}
-
-
-// ЭКРАН 5 - Камера
-@Composable
-fun CameraScreen(navController: NavHostController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-
-    ) {
+        // Заголовок с кнопкой назад
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Кнопка назад слева
             IconButton(
                 onClick = { navController.popBackStack() }
             ) {
@@ -387,16 +337,18 @@ fun CameraScreen(navController: NavHostController) {
                 )
             }
 
-            // Заголовок по центру (занимает оставшееся пространство)
             Text(
-                text = "Сфотографируйте кота",
-                style = MaterialTheme.typography.headlineSmall,
+                text = "Выбор источника фото",
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center
             )
-            }
+        }
 
+        Spacer(modifier = Modifier.height(48.dp))
+
+        // Контент
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -404,68 +356,269 @@ fun CameraScreen(navController: NavHostController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("ЗДЕСЬ БУДЕТ ВАШЕ ФОТО")
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = { navController.navigate("photoPreview") }, /*TODO: Надо сделать переход на камеру, чтобы фотать кота*/
-            modifier = Modifier.fillMaxWidth().height(56.dp)
-        ) {
-            Text("СДЕЛАТЬ ФОТО")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
             Button(
-                onClick = { /* TODO: Переснять фото */ },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary
+                onClick = { navController.navigate("camera") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Text(
+                    "КАМЕРА",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
                 )
-            ) {
-                Text("ПЕРЕСНЯТЬ")
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { navController.navigate("photoPreview") },
-                modifier = Modifier.fillMaxWidth().height(56.dp)
+                onClick = { navController.navigate("gallery") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) {
-                Text("ИСПОЛЬЗОВАТЬ")
+                Text(
+                    "ГАЛЕРЕЯ",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
+                )
             }
-        }
-
         }
     }
 }
 
 
+// ЭКРАН 5 - Камера
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun CameraScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Состояния для управления камерой
+    var hasCameraPermission by remember { mutableStateOf(false) }
+    var isCameraInitialized by remember { mutableStateOf(false) }
+    var captureInProgress by remember { mutableStateOf(false) }
+
+    // Запрос разрешения для доступа к камере
+    val cameraPermissionState = rememberPermissionState(
+        android.Manifest.permission.CAMERA
+    )
+
+    // Отображение камеры
+    val previewView = remember { PreviewView(context) }
+
+    // Контроллер камеры
+    val cameraController = remember {
+        CameraController(context, previewView, lifecycleOwner)
+    }
+
+    // Эффект для запроса разрешений
+    LaunchedEffect(Unit) {
+        if (!cameraPermissionState.status.isGranted) {
+            cameraPermissionState.launchPermissionRequest()
+        } else {
+            hasCameraPermission = true
+        }
+    }
+
+    // Эффект для инициализации камеры после получения разрешений
+    LaunchedEffect(hasCameraPermission) {
+        if (hasCameraPermission && !isCameraInitialized) {
+            cameraController.startCamera()
+            isCameraInitialized = true
+        }
+    }
+
+    // Очистка при выходе с экрана
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraController.shutdown()
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+    ) {
+        // Заголовок
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = { navController.popBackStack() }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Назад"
+                )
+            }
+
+            Text(
+                text = "Сфотографируйте кота",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (!hasCameraPermission) {
+            // Экран запроса разрешений
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Требуется доступ к камере",
+                    style = MaterialTheme.typography.headlineMedium,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Для работы камеры необходимо предоставить разрешение",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = { cameraPermissionState.launchPermissionRequest() }
+                ) {
+                    Text("ПРЕДОСТАВИТЬ РАЗРЕШЕНИЕ")
+                }
+            }
+        } else {
+            // Экран камеры
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Preview камеры
+                AndroidView(
+                    factory = { previewView },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .background(Color.Black)
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                if (captureInProgress) {
+                    // Индикатор загрузки во время съемки
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(80.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Обработка фото...",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else {
+                    // Кнопка съемки
+                    Button(
+                        onClick = {
+                            captureInProgress = true
+                            cameraController.takePicture { bitmap ->
+                                // Сохранение изображение и установление источника
+                                AppState.capturedImageBitmap = bitmap
+                                AppState.imageSource = ImageSource.CAMERA
+                                captureInProgress = false
+
+                                // Переход к предпросмотру после съемки
+                                navController.navigate("photoPreview")
+                            }
+                        },
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            painter = painterResource(id = android.R.drawable.ic_menu_camera),
+                            contentDescription = "Сделать фото",
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Нажмите для съемки",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
 // ЭКРАН 6 - Галерея
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun GalleryScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    // Версия для разрешения к галерее в зависимости от версии Android
+    val galleryPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+
+    // Запрос разрешений для галереи
+    val galleryPermissionState = rememberPermissionState(galleryPermission)
+
+    // Отслеживаем изменение статуса разрешения
+    val hasGalleryPermission by derivedStateOf {
+        galleryPermissionState.status.isGranted
+    }
+
+    val imagePicker = ImagePicker()
+    val imagePickerController = imagePicker.rememberImagePicker { bitmap ->
+        selectedImageBitmap = bitmap
+        if (bitmap != null) {
+            AppState.capturedImageBitmap = bitmap
+            AppState.imageSource = ImageSource.GALLERY
+        }
+    }
+
+    // Эффект для автоматического запроса разрешений при открытии экрана
+    LaunchedEffect(Unit) {
+        if (!galleryPermissionState.status.isGranted) {
+            galleryPermissionState.launchPermissionRequest()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp)
     ) {
-        Box(
-            modifier = Modifier.fillMaxWidth()
+        // Заголовок
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = { navController.popBackStack() },
-                modifier = Modifier.align(Alignment.CenterStart)
+                onClick = { navController.popBackStack() }
             ) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
@@ -476,8 +629,8 @@ fun GalleryScreen(navController: NavHostController) {
                 text = "Галерея",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center
             )
         }
 
@@ -492,32 +645,140 @@ fun GalleryScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("Место для выбора фото", style = MaterialTheme.typography.bodyMedium)
+        if (!hasGalleryPermission) {
+            // Экран запроса разрешений
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Требуется доступ к галерее",
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Для выбора фото необходимо предоставить разрешение",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = {
+                        galleryPermissionState.launchPermissionRequest()
+                    }
+                ) {
+                    Text("ПРЕДОСТАВИТЬ РАЗРЕШЕНИЕ")
+                }
+            }
+        } else {
+            // Основной контент галереи
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Отображение выбранного изображения
+                if (selectedImageBitmap != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            bitmap = selectedImageBitmap!!.asImageBitmap(),
+                            contentDescription = "Выбранное фото кота",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                } else {
+                    // Кнопка выбора фото
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable {
+                                imagePickerController.launchGallery()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                painter = painterResource(id = android.R.drawable.ic_menu_gallery),
+                                contentDescription = "Галерея",
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Нажмите чтобы выбрать фото",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = {
+                        if (selectedImageBitmap != null) {
+                            navController.navigate("photoPreview")
+                        } else {
+                            imagePickerController.launchGallery()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                ) {
+                    Text(
+                        if (selectedImageBitmap != null) "ПОДТВЕРДИТЬ" else "ВЫБРАТЬ ФОТО",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                if (selectedImageBitmap != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    TextButton(
+                        onClick = {
+                            selectedImageBitmap = null
+                            AppState.capturedImageBitmap = null
+                            AppState.imageSource = ImageSource.NONE
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp)
+                    ) {
+                        Text(
+                            "ВЫБРАТЬ ДРУГОЕ ФОТО",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = { navController.navigate("photoPreview") },
-            modifier = Modifier.fillMaxWidth().height(56.dp)
-        ) {
-            Text("ПОДТВЕРДИТЬ",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium)
-        }
-
     }
 }
 
 // ЭКРАН 7 - Предпросмотр фото
 @Composable
 fun PhotoPreviewScreen(navController: NavHostController) {
+    val capturedImageBitmap = AppState.capturedImageBitmap
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -527,10 +788,14 @@ fun PhotoPreviewScreen(navController: NavHostController) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
-        ){
-            // Кнопка назад слева
+        ) {
             IconButton(
-                onClick = { navController.popBackStack() }
+                onClick = {
+                    // Очищаем состояние при возврате
+                    AppState.capturedImageBitmap = null
+                    AppState.imageSource = ImageSource.NONE
+                    navController.popBackStack()
+                }
             ) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
@@ -546,41 +811,91 @@ fun PhotoPreviewScreen(navController: NavHostController) {
             )
         }
 
-
         Spacer(modifier = Modifier.height(32.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(400.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("ВАШЕ ФОТО")
+        // Отображаем изображение из любого источника
+        if (capturedImageBitmap != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    bitmap = capturedImageBitmap.asImageBitmap(),
+                    contentDescription = when (AppState.imageSource) {
+                        ImageSource.CAMERA -> "Сфотографированный кот"
+                        ImageSource.GALLERY -> "Выбранный из галереи кот"
+                        else -> "Фото кота"
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("ФОТО НЕ НАЙДЕНО")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Вернитесь и выберите фото",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = { navController.navigate("analysis") },
-            modifier = Modifier.fillMaxWidth().height(56.dp)
+            onClick = {
+                // Переходим к анализу только если есть изображение
+                if (capturedImageBitmap != null) {
+                    navController.navigate("analysis")
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            enabled = capturedImageBitmap != null
         ) {
-            Text("АНАЛИЗИРОВАТЬ", style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium)
+            Text(
+                "АНАЛИЗИРОВАТЬ",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(
-            onClick = { navController.popBackStack() }
+            onClick = {
+                // Очищаем изображение при возврате к выбору фото
+                AppState.capturedImageBitmap = null
+                AppState.imageSource = ImageSource.NONE
+                navController.popBackStack()
+            }
         ) {
-            Text("ВЫБРАТЬ ДРУГОЕ", style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium)
+            Text(
+                "ВЫБРАТЬ ДРУГОЕ",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
 
-// ЭКРАН 8 - Анализ (ИСПРАВЛЕННЫЙ)
+// ЭКРАН 8 - Анализ
 @Composable
 fun AnalysisScreen(navController: NavHostController) {
     Column(
