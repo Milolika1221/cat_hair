@@ -12,7 +12,6 @@ from .dto import (
     SessionData,
     ValidationResult,
 )
-from .entities import CatCharacteristics, Cats, Haircuts, Recommendations
 from .interfaces import (
     IImageProcessingService,
     IRecommendationService,
@@ -20,10 +19,6 @@ from .interfaces import (
 )
 
 __all__ = [
-    "Cats",
-    "CatCharacteristics",
-    "Haircuts",
-    "Recommendations",
     "IUserSessionService",
     "IImageProcessingService",
     "IRecommendationService",

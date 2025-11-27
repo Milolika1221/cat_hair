@@ -12,9 +12,7 @@ from ..domain.dto import (
     ValidationResult,
 )
 from .schemas import (
-    AnalysisResult,
     HaircutRecommendation,
-    ImageProcessingResponse,
     ImageUploadResponse,
     SessionCreateResponse,
 )
@@ -25,13 +23,11 @@ __all__ = [
     "ImageUploadResponse",
     "SessionData",
     "ValidationResult",
-    "AnalysisResult",
     "HaircutRecommendation",
     "RecommendationResult",
     "ScoredHaircut",
     "ProcessingError",
     "ProcessingResult",
-    "ImageProcessingResponse",
     "NeuralNetworkResponse",
     "NeuralNetworkRequest",
     "ImageData",
