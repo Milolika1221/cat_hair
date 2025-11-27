@@ -9,7 +9,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cat_server.core.base import Base
 
@@ -27,12 +27,10 @@ class Cats(Base):
 class Recommendations(Base):
     __tablename__ = "Recommendations"
 
-    id = Column("RecommendationID", Integer, primary_key=True, autoincrement=True)
-    cat_id = Column("CatID", Integer, ForeignKey("Cats.CatID"), nullable=False)
-    haircut_id = Column(
-        "HaircutID", Integer, ForeignKey("Haircuts.HaircutID"), nullable=False
-    )
-    confidence = Column("Confidence", Float, nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True)  # ← явный PK
+    cat_id: Mapped[int] = mapped_column(ForeignKey("Cats.CatID"))
+    haircut_id: Mapped[int] = mapped_column(ForeignKey("Haircuts.HaircutID"))
+    confidence: Mapped[float]
 
     cats = relationship("Cats", back_populates="recommendations")
     haircuts = relationship("Haircuts", back_populates="recommendations")

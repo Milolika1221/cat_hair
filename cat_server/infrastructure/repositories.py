@@ -183,14 +183,10 @@ class RecommendationsRepository(IRecommendationsRepository):
         return recommendation
 
     async def get_by_cat_id(self, cat_id: int) -> Recommendations | None:
-        try:
-            stmt = select(Recommendations).where(Recommendations.cat_id == cat_id)
-            result = await self.session.execute(stmt)
-            recommendation = result.scalar()
-            return recommendation
-        except Exception as e:
-            logger.error(f"Ошибка при получении рекомендаций для cat_id={cat_id}: {e}")
-            return None
+        result = await self.session.execute(
+            select(Recommendations).where(Recommendations.cat_id == cat_id)
+        )
+        return result.scalar_one_or_none()
 
     async def get_by_cat_id_and_haircut(
         self, cat_id: int, haircut: int | str
