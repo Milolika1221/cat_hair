@@ -37,31 +37,17 @@ def get_image_processing_service(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> ImageProcessingService:
     cats_repo = CatsRepository(db_session)
-    images_repo = CatImagesRepository(db_session)
-    characteristic_repo = CatCharacteristicsRepository(db_session)
+    haircuts_repo = HaircutsRepository(db_session)
+    recommendations_repo = RecommendationsRepository(db_session)
 
     neural_client = NeuralNetworkClient(
         base_url=settings.NEUTRAL_API_URL, timeout=settings.NEURAL_API_TIMEOUT
     )
 
     return ImageProcessingService(
-        user_session_service=user_session,
         cats_repo=cats_repo,
-        images_repo=images_repo,
-        characteristics_repo=characteristic_repo,
+        haircut_repo=haircuts_repo,
+        recommendations_repo=recommendations_repo,
+        user_session_service=user_session,
         neural_client=neural_client,
-    )
-
-
-def get_recommendation_service(
-    db_session=Depends(get_db_session),
-) -> RecommendationService:
-    characteristics_repo = CatCharacteristicsRepository(db_session)
-    haircuts_repo = HaircutsRepository(db_session)
-    recommendations_repo = RecommendationsRepository(db_session)
-
-    return RecommendationService(
-        characteristics_repository=characteristics_repo,
-        haircuts_repository=haircuts_repo,
-        recommendations_repository=recommendations_repo,
     )
