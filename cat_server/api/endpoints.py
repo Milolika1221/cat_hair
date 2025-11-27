@@ -2,7 +2,7 @@ import base64
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cat_server.api.schemas import (
@@ -78,6 +78,8 @@ async def upload_images(
         if cat is None:
             raise HTTPException(status_code=404, detail="Cat not found")
 
+    await user_session_service.link_cat_to_session(session_id, cat_id)
+
     try:
         result = await image_processing_service.process_images(
             session_id=session_id, cat_id=cat_id, image_data=image_data
@@ -116,20 +118,26 @@ async def upload_images(
 async def get_cat_recommendations(
     session_id: str,
     cat_id: int,
+    user_session_service: UserSessionService = Depends(get_user_session_service),
     image_processing_service: ImageProcessingService = Depends(
         get_image_processing_service
     ),
 ):
-    """Формирование полноценного ответа пользователю"""
+    try:
+        session_data = await user_session_service.get_session(session_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Session not found")
 
-    # Получаем рекомендации
-    rec_result = await image_processing_service.get_processing_result(
-        cat_id,
-    )
+    if session_data.cat_id is None:
+        raise HTTPException(status_code=400, detail="No cat linked to this session")
 
+    if session_data.cat_id != cat_id:
+        raise HTTPException(status_code=403, detail="Cat ID does not match the session")
+
+    rec_result = await image_processing_service.get_processing_result(cat_id)
     if rec_result is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=f"Recommendations for cat_id={cat_id} not found",
         )
 

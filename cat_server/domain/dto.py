@@ -18,6 +18,7 @@ class SessionData(BaseModel):
     session_id: str
     created_at: datetime
     image: ImageData | None
+    cat_id: Optional[int] = None
     status: str  # 'active', 'processing', 'completed', 'error'
 
 

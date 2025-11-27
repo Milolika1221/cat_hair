@@ -16,6 +16,10 @@ class IUserSessionService(ABC):
         pass
 
     @abstractmethod
+    async def link_cat_to_session(self, session_id: str, cat_id: int) -> bool:
+        pass
+
+    @abstractmethod
     async def get_session(self, session_id: str) -> SessionData:
         pass
 

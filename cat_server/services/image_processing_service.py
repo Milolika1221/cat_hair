@@ -403,19 +403,19 @@ class ImageProcessingService:
         return ValidationResult(is_valid=len(errors) == 0, errors=errors)
 
     async def get_processing_result(self, cat_id: int) -> Dict[str, Any] | None:
-        recommendation = await self.recommendations_repo.get_by_cat_id(cat_id=cat_id)
-        haircut = await self.haircut_repo.get_by_cat_id(cat_id=cat_id)
-
-        if recommendation is None or haircut is None:
+        recommendation = await self.recommendations_repo.get_by_cat_id(cat_id)
+        if recommendation is None:
             return None
 
-        haircut_rec = HaircutRecommendation(
-            haircut_name=haircut.name,  # pyright: ignore[reportArgumentType]
-            haircut_description=haircut.description,  # pyright: ignore[reportArgumentType]
-        )
+        haircut = await self.haircut_repo.get_by_id(recommendation.haircut_id)
+        if haircut is None:
+            return None
 
         return {
-            "cat_id": recommendation.cat_id,
+            "cat_id": cat_id,
             "image": haircut.image_bytes,
-            "recommendation": haircut_rec,
+            "recommendation": HaircutRecommendation(
+                haircut_name=haircut.name,  # pyright: ignore[reportArgumentType]
+                haircut_description=haircut.description,  # pyright: ignore[reportArgumentType]
+            ),
         }
