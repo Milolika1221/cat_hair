@@ -7,15 +7,14 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-import aiofiles
 import aiohttp
 from PIL import Image as PILImage
 
-from cat_server.api.schemas import ImageProcessingResponse
 from cat_server.domain.dto import (
     AnalysisResult,
+    HaircutRecommendation,
     ImageData,
     NeuralNetworkRequest,
     NeuralNetworkResponse,
@@ -25,9 +24,9 @@ from cat_server.domain.dto import (
     ValidationResult,
 )
 from cat_server.infrastructure.repositories import (
-    ICatCharacteristicsRepository,
-    ICatImagesRepository,
     ICatsRepository,
+    IHaircutsRepository,
+    IRecommendationsRepository,
 )
 from cat_server.services.neural_service import neural_service
 from cat_server.services.user_session_service import UserSessionService
@@ -256,17 +255,17 @@ class NeuralNetworkClient:
 class ImageProcessingService:
     def __init__(
         self,
-        user_session_service: UserSessionService,
         cats_repo: ICatsRepository,
-        images_repo: ICatImagesRepository,
-        characteristics_repo: ICatCharacteristicsRepository,
+        haircut_repo: IHaircutsRepository,
+        recommendations_repo: IRecommendationsRepository,
+        user_session_service: UserSessionService,
         neural_client: NeuralNetworkClient,
         upload_dir: str = "uploads",
     ):
-        self.user_session_service = user_session_service
         self.cats_repo = cats_repo
-        self.images_repo = images_repo
-        self.characteristics_repo = characteristics_repo
+        self.haircut_repo = haircut_repo
+        self.recommendations_repo = recommendations_repo
+        self.user_session_service = user_session_service
         self.neural_client = neural_client
         self.upload_dir = upload_dir
 
@@ -276,26 +275,24 @@ class ImageProcessingService:
         )
 
     async def process_images(
-        self, session_id: str, cat_id: int, images_data: List[ImageData]
+        self, session_id: str, cat_id: int, image_data: ImageData
     ) -> ProcessingResult:
         start_time = datetime.now()
         logger.info(
-            f"🚀 Начало обработки изображений: session_id={session_id}, cat_id={cat_id}, images={len(images_data)}"
+            f"🚀 Начало обработки изображений: session_id={session_id}, cat_id={cat_id}"
         )
         try:
-            session_images = images_data
-
-            validation = await self.validate_images(session_images)
-            if not validation.is_valid:
+            image_is_valid = await self._validate_image(image_data)
+            if not image_is_valid.is_valid:
                 logger.warning(
-                    f"❌ Валидация не пройдена: {[err.message for err in validation.errors]}"
+                    f"❌ Валидация не пройдена: {[err.message for err in image_is_valid.errors]}"
                 )
                 raise ProcessingException(
                     ProcessingError(
                         error_id="VALIDATION_FAILED",
                         error_type="validation",
                         message="Валидация не пройдена",
-                        details=str([err.message for err in validation.errors]),
+                        details=str([err.message for err in image_is_valid.errors]),
                     )
                 )
 
@@ -310,48 +307,21 @@ class ImageProcessingService:
                     )
                 )
 
-            logger.info("💾 Сохранение оригинальных изображений...")
-            orig_images_info = []
-            for image_data in session_images:
-                image_info = await self._save_original_image(cat_id, image_data)
-                orig_images_info.append(image_info)
-
             nn_request = NeuralNetworkRequest(
                 session_id=session_id,
                 cat_id=cat_id,
-                images=session_images,
-                processing_type="analysis_and_enhancement",
+                image=image_data,
+                processing_type="analysis and enhancement",
             )
             logger.info("🧠 Отправка изображений в нейросеть...")
             nn_response = await self.neural_client.analyze_and_process_image(nn_request)
 
-            logger.info("💾 Сохранение обработанных изображений...")
-            processed_images_info = []
-            for processed_image in nn_response.processed_images:
-                image_info = await self._save_processed_image(cat_id, processed_image)
-                processed_images_info.append(image_info)
-
-            logger.info("📊 Сохранение характеристик кота в БД...")
-            characteristics = [
-                await self.characteristics_repo.create(
-                    cat_id=cat_id,
-                    color=res.color,
-                    hair_length=res.hair_length,
-                    confidence_level=res.confidence,
-                    analyzed_at=res.analyzed_at,
-                )
-                for res in nn_response.analysis_result
-            ]
-
-            del characteristics
-
-            logger.info("📦 Формирование ответа пользователю...")
-            processed_responses = [
-                ImageProcessingResponse.from_cat_images(
-                    cat_image=img, processing_type="enhanced"
-                )
-                for img in nn_response.processed_images
-            ]
+            recommendation = await self.recommendations_repo.create(
+                cat_id,
+                nn_response.analysis_result.predicted_class,
+                nn_response.analysis_result.confidence,
+            )
+            del recommendation
 
             processing_time_ms = int(
                 (datetime.now() - start_time).total_seconds() * 1000
@@ -361,8 +331,7 @@ class ImageProcessingService:
             return ProcessingResult(
                 session_id=session_id,
                 cat_id=cat.id,  # pyright: ignore[reportArgumentType]
-                characteristics=nn_response.analysis_result,
-                processed_images=processed_responses,
+                analysis_result=nn_response.analysis_result,
                 processing_time_ms=processing_time_ms,
                 status="completed",
                 error=None,
@@ -377,7 +346,6 @@ class ImageProcessingService:
             return ProcessingResult(
                 session_id=session_id,
                 cat_id=cat_id,
-                processed_images=[],
                 processing_time_ms=processing_time_ms,
                 status="error",
                 error=e.error,
@@ -390,7 +358,7 @@ class ImageProcessingService:
             return ProcessingResult(
                 session_id=session_id,
                 cat_id=cat_id,
-                processed_images=[],
+                analysis_result="nothing",
                 processing_time_ms=processing_time_ms,
                 status="error",
                 error=ProcessingError(
@@ -401,131 +369,67 @@ class ImageProcessingService:
                 ),
             )
 
-    async def get_processing_result(
-        self, session_id: str, cat_id: int
-    ) -> Optional[ProcessingResult]:
-        start_time = datetime.now()
-        logger.debug(f"🔍 Запрос результата обработки для cat_id={cat_id}")
-        # Получаем характеристики
-        characteristics = await self.characteristics_repo.get_by_cat_id(cat_id)
-        if not characteristics:
-            return None
-
-        characteristic_dto_list = [
-            AnalysisResult(
-                color=characteristic.color,  # pyright: ignore[reportArgumentType]
-                hair_length=characteristic.hair_length,  # pyright: ignore[reportArgumentType]
-                confidence=characteristic.confidence_level,  # pyright: ignore[reportArgumentType]
-                analyzed_at=characteristic.analyzed_at,  # pyright: ignore[reportArgumentType]
-            )
-            for characteristic in characteristics
-        ]
-
-        images = await self.images_repo.get_by_cat_id(cat_id)
-
-        result = ProcessingResult(
-            session_id=session_id,
-            cat_id=cat_id,
-            characteristics=characteristic_dto_list,
-            processed_images=[
-                ImageProcessingResponse.from_cat_images(img, "enhanced")
-                for img in images
-            ],
-            processing_time_ms=int(
-                (datetime.now() - start_time).total_seconds() * 1000
-            ),
-            status="completed",
-            error=None,
-        )
-
-        return result
-
-    async def _save_original_image(self, cat_id: int, image_data: ImageData) -> dict:
-        cat_dir = os.path.join(self.upload_dir, str(cat_id), "original")
-        os.makedirs(cat_dir, exist_ok=True)
-
-        file_path = os.path.join(cat_dir, image_data.file_name)
-        async with aiofiles.open(file_path, "wb") as f:
-            await f.write(image_data.data)
-
-        image_record = await self.images_repo.create(
-            cat_id=cat_id,
-            file_name=image_data.file_name,
-            file_path=file_path,
-            file_size=image_data.size,
-            resolution=image_data.resolution or "",
-            format=image_data.format,
-            uploaded_at=datetime.now(),
-        )
-
-        logger.debug(f"💾 Оригинальное изображение сохранено: {file_path}")
-        return {"id": image_record.id, "path": file_path}
-
-    async def _save_processed_image(self, cat_id: int, image_data: ImageData) -> dict:
-        cat_dir = os.path.join(self.upload_dir, str(cat_id), "processed")
-        os.makedirs(cat_dir, exist_ok=True)
-
-        file_path = os.path.join(cat_dir, image_data.file_name)
-        async with aiofiles.open(file_path, "wb") as f:
-            await f.write(image_data.data)
-
-        image_record = await self.images_repo.create(
-            cat_id=cat_id,
-            file_name=image_data.file_name,
-            file_path=file_path,
-            file_size=image_data.size,
-            resolution=image_data.resolution or "",
-            format=image_data.format,
-            uploaded_at=datetime.now(),
-        )
-        logger.debug(f"💾 Обработанное изображение сохранено: {file_path}")
-        return {"id": image_record.id, "path": file_path}
-
     @staticmethod
-    async def validate_images(images_data: List[ImageData]) -> ValidationResult:
+    async def _validate_image(image_data: ImageData) -> ValidationResult:
         logger.debug("🔍 Начало валидации изображений...")
         errors = []
 
-        for image in images_data:
-            if image.size > 10 * 1024 * 1024:  # 10MB
-                errors.append(
-                    ProcessingError(
-                        error_id="VALIDATION_SIZE",
-                        error_type="validation",
-                        message=f"Изображение {image.file_name} превышает 10MB",
-                        suggestions=["Используйте изображение размером до 10MB"],
-                    )
+        if image_data.size > 10 * 1024 * 1024:  # 10MB
+            errors.append(
+                ProcessingError(
+                    error_id="VALIDATION_SIZE",
+                    error_type="validation",
+                    message=f"Изображение {image_data.file_name} превышает 10MB",
+                    suggestions=["Используйте изображение размером до 10MB"],
                 )
-                continue
+            )
 
-            try:
-                with PILImage.open(io.BytesIO(image.data)) as img:
-                    width, height = img.size
-                    if width < 640 or height < 480:
-                        errors.append(
-                            ProcessingError(
-                                error_id="VALIDATION_RESOLUTION",
-                                error_type="validation",
-                                message=f"Изображение {image.file_name} имеет недостаточное разрешение",
-                                details=f"Текущее: {width}x{height}, минимальное: 640x480",
-                                suggestions=[
-                                    "Используйте изображение с более высоким разрешением"
-                                ],
-                            )
+        try:
+            with PILImage.open(io.BytesIO(image_data.data)) as img:
+                width, height = img.size
+                if width < 640 or height < 480:
+                    errors.append(
+                        ProcessingError(
+                            error_id="VALIDATION_RESOLUTION",
+                            error_type="validation",
+                            message=f"Изображение {image_data.file_name} имеет недостаточное разрешение",
+                            details=f"Текущее: {width}x{height}, минимальное: 640x480",
+                            suggestions=[
+                                "Используйте изображение с более высоким разрешением"
+                            ],
                         )
-
-                    image.resolution = f"{width}x{height}"
-
-            except Exception as e:
-                errors.append(
-                    ProcessingError(
-                        error_id="VALIDATION_FORMAT",
-                        error_type="validation",
-                        message=f"Неверный формат изображения {image.file_name}",
-                        details=str(e),
-                        suggestions=["Используйте формат JPEG или PNG"],
                     )
+
+                image_data.resolution = f"{width}x{height}"
+
+        except Exception as e:
+            errors.append(
+                ProcessingError(
+                    error_id="VALIDATION_FORMAT",
+                    error_type="validation",
+                    message=f"Неверный формат изображения {image_data.file_name}",
+                    details=str(e),
+                    suggestions=["Используйте формат JPEG или PNG"],
                 )
+            )
 
         logger.debug(f"🔍 Валидация завершена: ошибок={len(errors)}")
         return ValidationResult(is_valid=len(errors) == 0, errors=errors)
+
+    async def get_processing_result(self, cat_id: int) -> Dict[str, Any] | None:
+        recommendation = await self.recommendations_repo.get_by_cat_id(cat_id=cat_id)
+        haircut = await self.haircut_repo.get_by_cat_id(cat_id=cat_id)
+
+        if recommendation is None or haircut is None:
+            return None
+
+        haircut_rec = HaircutRecommendation(
+            haircut_name=haircut.name,  # pyright: ignore[reportArgumentType]
+            haircut_description=haircut.description,  # pyright: ignore[reportArgumentType]
+        )
+
+        return {
+            "cat_id": recommendation.cat_id,
+            "image": haircut.image_bytes,
+            "recommendation": haircut_rec,
+        }
