@@ -44,13 +44,12 @@ class NeuralNetworkClient:
         )
 
     async def _process_with_local_neural(
-        self, images_data: List[ImageData]
+        self, image_data: ImageData
     ) -> NeuralNetworkResponse:
         """Обработка изображений локальной нейросетью"""
         logger.info("🧠 Обработка локальной нейросетью...")
 
-        image_data = images_data[0].data
-        neural_result = await neural_service.process_image(image_data)
+        neural_result = await neural_service.process_image(image_data.data)
 
         if not neural_result["success"]:
             raise ProcessingException(
@@ -65,28 +64,23 @@ class NeuralNetworkClient:
 
         # Создаем AnalysisResult
         analysis_result = AnalysisResult(
-            color="определен нейросетью",
-            hair_length="определен нейросетью",
             confidence=top_prediction.get("confidence", 0.0),
             analyzed_at=datetime.now(),
+            predicted_class=top_prediction["class_name"],
         )
 
-        processed_images = []
-        for img in images_data:
-            processed_images.append(
-                ImageData(
-                    file_name=f"processed_{img.file_name}",
-                    data=img.data,
-                    size=img.size,
-                    format=img.format,
-                    resolution=img.resolution,
-                    is_processed=True,
-                )
-            )
+        processed_image = ImageData(
+            file_name=f"processed_{image_data.file_name}",
+            data=image_data.data,
+            size=image_data.size,
+            format=image_data.format,
+            resolution=image_data.resolution,
+            is_processed=True,
+        )
 
         return NeuralNetworkResponse(
-            analysis_result=[analysis_result],
-            processed_images=processed_images,
+            analysis_result=analysis_result,
+            processed_image=processed_image,
             processing_time_ms=0,
             processing_metadata={
                 "model_type": "teachable_machine",
@@ -103,28 +97,23 @@ class NeuralNetworkClient:
         )
         async with aiohttp.ClientSession() as session:
             form_data = aiohttp.FormData()
-            for image in request.images:
-                form_data.add_field(
-                    name="image",
-                    value=image.data,
-                    filename=f"{image.file_name}",
-                    content_type=f"image/{image.format.lower()}",
-                )
+            form_data.add_field(
+                name="image",
+                value=request.image.data,
+                filename=f"{request.image.file_name}",
+                content_type=f"image/{request.image.format.lower()}",
+            )
 
             metadata = {
                 "session_id": request.session_id,
                 "cat_id": request.cat_id,
                 "processed_at": request.processing_type,
-                "total_image": len(request.images),
-                "image_metadata": [
-                    {
-                        "filename": img.file_name,
-                        "format": img.format,
-                        "size": img.size,
-                        "resolution": img.resolution,
-                    }
-                    for img in request.images
-                ],
+                "image_metadata": {
+                    "filename": request.image.file_name,
+                    "format": request.image.format,
+                    "size": request.image.size,
+                    "resolution": request.image.resolution,
+                },
             }
             form_data.add_field("metadata", json.dumps(metadata))
             try:
@@ -144,6 +133,7 @@ class NeuralNetworkClient:
                     else:
                         processing_error = await self._handle_http_error(response)
                         raise ProcessingException(processing_error)
+
             except asyncio.TimeoutError:
                 logger.error("⏰ Таймаут при запросе к нейросети")
                 raise ProcessingException(
@@ -171,37 +161,33 @@ class NeuralNetworkClient:
                 )
 
     @staticmethod
-    def _parse_success_response(data: Dict[str, Any]) -> NeuralNetworkResponse:
+    def _parse_success_response(neural_data: Dict[str, Any]) -> NeuralNetworkResponse:
         logger.debug("🔄 Парсинг успешного ответа от нейросети")
-        analysis_data = data.get("analysis_result", {})
+        analysis_data = neural_data.get("analysis_result", {})
         analysis_result = AnalysisResult(
-            color=analysis_data.get("color", "не определен"),
-            hair_length=analysis_data.get("hair_length", "не определен"),
             confidence=analysis_data.get("confidence", 0.0),
             analyzed_at=datetime.fromisoformat(
                 analysis_data.get("analysis_timestamp", datetime.now().isoformat())
             ),
+            predicted_class=analysis_data.get("predicted_class", ""),
         )
 
-        processed_images = []
-        for img_data in data.get("processed_images", []):
-            image_bytes = base64.b64decode(img_data["data"])
-            processed_images.append(
-                ImageData(
-                    file_name=img_data["filename"],
-                    data=image_bytes,
-                    size=len(image_bytes),
-                    format=img_data["format"],
-                    resolution=img_data.get("resolution"),
-                    is_processed=True,
-                )
-            )
+        image_data = neural_data.get("processed_image", Any)
+        image_bytes = base64.b64decode(image_data["data"])
+        processed_image = ImageData(
+            file_name=image_data["filename"],
+            data=image_bytes,
+            size=len(image_bytes),
+            format=image_data["format"],
+            resolution=image_data["resolution"],
+            is_processed=True,
+        )
 
         result = NeuralNetworkResponse(
-            analysis_result=[analysis_result],
-            processed_images=processed_images,
-            processing_time_ms=data.get("processing_time_ms", 0),
-            processing_metadata=data.get("processing_metadata", {}),
+            analysis_result=analysis_result,
+            processed_image=processed_image,
+            processing_time_ms=neural_data.get("processing_time_ms", 0),
+            processing_metadata=neural_data.get("processing_metadata", {}),
         )
         logger.info("✅ Ответ от нейросети успешно распарсен")
         return result
