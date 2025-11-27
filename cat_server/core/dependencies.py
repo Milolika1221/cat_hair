@@ -3,19 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cat_server.core.config import settings
 from cat_server.core.database import AsyncSessionLocal
-from cat_server.infrastructure.repositories import (
-    CatCharacteristicsRepository,
-    CatImagesRepository,
-    CatsRepository,
-    HaircutsRepository,
-    RecommendationsRepository,
-)
-from cat_server.services.image_processing_service import (
-    ImageProcessingService,
-    NeuralNetworkClient,
-    UserSessionService,
-)
-from cat_server.services.recommendation_service import RecommendationService
+from cat_server.services.user_session_service import UserSessionService
 
 USER_SESSION_SERVICE = UserSessionService()
 
@@ -35,7 +23,17 @@ def get_user_session_service() -> UserSessionService:
 def get_image_processing_service(
     user_session: UserSessionService = Depends(get_user_session_service),
     db_session: AsyncSession = Depends(get_db_session),
-) -> ImageProcessingService:
+):
+    from cat_server.infrastructure.repositories import (
+        CatsRepository,
+        HaircutsRepository,
+        RecommendationsRepository,
+    )
+    from cat_server.services.image_processing_service import (
+        ImageProcessingService,
+        NeuralNetworkClient,
+    )
+
     cats_repo = CatsRepository(db_session)
     haircuts_repo = HaircutsRepository(db_session)
     recommendations_repo = RecommendationsRepository(db_session)
