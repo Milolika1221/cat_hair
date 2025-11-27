@@ -9,7 +9,6 @@ from sqlalchemy import (
     LargeBinary,
     String,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 
 from cat_server.core.base import Base
@@ -33,6 +32,7 @@ class Recommendations(Base):
     haircut_id = Column(
         "HaircutID", Integer, ForeignKey("Haircuts.HaircutID"), nullable=False
     )
+    confidence = Column("Confidence", Float, nullable=False)
 
     cats = relationship("Cats", back_populates="recommendations")
     haircuts = relationship("Haircuts", back_populates="recommendations")
@@ -44,7 +44,6 @@ class Haircuts(Base):
     id = Column("HaircutID", Integer, primary_key=True, autoincrement=True)
     name = Column("Name", String, unique=True)
     description = Column("Description", String)
-    reasons = Column("Reasons", ARRAY(String))
     image_bytes = Column("ImageBytes", LargeBinary)
 
     recommendations = relationship("Recommendations", back_populates="haircuts")

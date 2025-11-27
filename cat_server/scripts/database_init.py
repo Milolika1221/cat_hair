@@ -1,7 +1,7 @@
 import asyncio
 
 from cat_server.core.database import engine
-from cat_server.domain.entities import Base
+from cat_server.infrastructure.entities import Base
 
 
 async def create_database():
