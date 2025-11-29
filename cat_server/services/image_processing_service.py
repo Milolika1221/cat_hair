@@ -268,20 +268,6 @@ class ImageProcessingService:
             f"🚀 Начало обработки изображений: session_id={session_id}, cat_id={cat_id}"
         )
         try:
-            image_is_valid = await self._validate_image(image_data)
-            if not image_is_valid.is_valid:
-                logger.warning(
-                    f"❌ Валидация не пройдена: {[err.message for err in image_is_valid.errors]}"
-                )
-                raise ProcessingException(
-                    ProcessingError(
-                        error_id="VALIDATION_FAILED",
-                        error_type="validation",
-                        message="Валидация не пройдена",
-                        details=str([err.message for err in image_is_valid.errors]),
-                    )
-                )
-
             cat = await self.cats_repo.get_by_id(cat_id)
             if not cat:
                 logger.warning(f"🐱 Кот не найден: cat_id={cat_id}")
@@ -355,8 +341,7 @@ class ImageProcessingService:
                 ),
             )
 
-    @staticmethod
-    async def _validate_image(image_data: ImageData) -> ValidationResult:
+    async def validate_image(self, image_data: ImageData) -> ValidationResult:
         logger.debug("🔍 Начало валидации изображений...")
         errors = []
 
