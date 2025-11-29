@@ -61,6 +61,10 @@ async def upload_images(
     )
     await file.close()
 
+    image_is_valid = await image_processing_service.validate_image(image_data)
+    if not image_is_valid.is_valid:
+        raise HTTPException(status_code=400, detail="Invalid image")
+
     # Добавляем изображения в сессию
     success = await user_session_service.add_image_to_session(
         session_id=session_id, image_data=image_data
