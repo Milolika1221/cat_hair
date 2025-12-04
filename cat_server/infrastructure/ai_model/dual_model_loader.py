@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import numpy as np
@@ -8,18 +9,16 @@ import tensorflow as tf
 
 logger = logging.getLogger(__name__)
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 class DualModelLoader:
     # Загрузчик двух моделей: фильтр кота и основная модель стрижек
 
     def __init__(
         self,
-        main_model_dir: str = os.path.join(
-            os.path.dirname(__file__), "models", "main_model"
-        ),
-        cat_filter_model_dir: str = os.path.join(
-            os.path.dirname(__file__), "models", "cat_filter"
-        ),
+        main_model_dir: str = str(BASE_DIR / "models" / "main_model"),
+        cat_filter_model_dir: str = str(BASE_DIR / "models" / "cat_filter"),
     ):
         self.main_model_dir = main_model_dir
         self.cat_filter_model_dir = cat_filter_model_dir
@@ -31,7 +30,6 @@ class DualModelLoader:
     def load_models(self) -> bool:
         try:
             logger.info("Загрузка моделей...")
-
             # Загружаем модель-фильтр кота
             if not os.path.exists(
                 os.path.join(self.cat_filter_model_dir, "saved_model.pb")
