@@ -297,12 +297,21 @@ class ImageProcessingService:
             nn_response = await self.neural_client.analyze_and_process_image(nn_request)
 
             if nn_response is None:
-                raise ProcessingException(
-                    ProcessingError(
+                processing_time_ms = int(
+                    (datetime.now() - start_time).total_seconds() * 1000
+                )
+                return ProcessingResult(
+                    session_id=session_id,
+                    cat_id=cat_id,
+                    analysis_result="nothing",
+                    processing_time_ms=processing_time_ms,
+                    status="error",
+                    error=ProcessingError(
                         error_id="NEURAL_NETWORK_ERROR",
                         error_type="neural_network",
                         message="Ошибка нейросети",
-                    )
+                        details="Кот не определён",
+                    ),
                 )
 
             recommendation = await self.recommendations_repo.create(
