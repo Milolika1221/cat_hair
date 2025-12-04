@@ -48,6 +48,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            HistoryManager.initialize(this)
+
             CatStyleTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -160,8 +162,6 @@ fun MainScreen(navController: NavHostController) {
                 fontWeight = FontWeight.Medium
             )
         }
-
-
     }
 }
 
@@ -223,6 +223,9 @@ fun InstructionItem(text: String) {
 // ЭКРАН 3 - История
 @Composable
 fun HistoryScreen(navController: NavHostController) {
+    // Получаем записи из HistoryManager
+    val historyRecords = remember { HistoryManager.historyRecords }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -252,31 +255,36 @@ fun HistoryScreen(navController: NavHostController) {
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center
             )
+
+            // Индикатор количества записей
+            Text(
+                text = "(${historyRecords.size})",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Список карточек истории
-        HistoryCard(
-            title = "Лев",
-            onClick = {
-                navController.navigate("recommendations")
+        historyRecords.forEachIndexed { index, record ->
+            HistoryCard(
+                record = record,
+                onClick = {
+                    // Сохранение записи в AppState
+                    AppState.currentHistoryRecord = record
+                    navController.navigate("recommendations")
+                }
+            )
+            if (index < historyRecords.size - 1) {
+                Spacer(modifier = Modifier.height(16.dp))
             }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        HistoryCard(
-            title = "Лев",
-            onClick = {
-                navController.navigate("recommendations")
-            }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }
 
 @Composable
 fun HistoryCard(
-    title: String,
+    record: HistoryRecord,
     onClick: () -> Unit
 ) {
     Card(
@@ -292,21 +300,48 @@ fun HistoryCard(
             // Левая часть - фото
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .aspectRatio(1f)
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(
-                        color = Color.Gray.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(8.dp)
+                        color = Color.Gray.copy(alpha = 0.3f)
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Фото", color = Color.Gray)// TODO: Вместо Text, там должна быть фотография
+                // Пытаемся загрузить изображение из base64
+                record.image?.let { base64String ->
+                    val bitmap = HistoryManager.base64ToBitmap(base64String)
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Фото из истории",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        // Если не удалось загрузить
+                        Icon(
+                            painter = painterResource(id = android.R.drawable.ic_menu_camera),
+                            contentDescription = "Ошибка загрузки",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                } ?: run {
+                    // Если нет base64 строки
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_camera),
+                        contentDescription = "Нет фото",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
+            // Правая часть - информация
             Text(
-                text = title,
+                text = record.title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(3f)
@@ -386,7 +421,6 @@ fun PhotoSourceScreen(navController: NavHostController) {
         }
     }
 }
-
 
 // ЭКРАН 5 - Камера
 @OptIn(ExperimentalPermissionsApi::class)
@@ -898,6 +932,8 @@ fun PhotoPreviewScreen(navController: NavHostController) {
 // ЭКРАН 8 - Анализ
 @Composable
 fun AnalysisScreen(navController: NavHostController) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -939,10 +975,18 @@ fun AnalysisScreen(navController: NavHostController) {
         LaunchedEffect(Unit) {
             delay(3000L)
 
-            val isSuccess = listOf(true, false).random()
+            val isSuccess = listOf(true, true).random() // Параметр нужно будет настроить. Стоит так для проверки
 
             if (isSuccess) {
-                navController.navigate("recommendations")
+                AppState.capturedImageBitmap?.let { bitmap ->
+                    val imageBase64 = HistoryManager.bitmapToBase64(bitmap)
+                    val record = HistoryRecord(
+                        image = imageBase64,
+                        title = "Лев"
+                    )
+                    HistoryManager.addRecord(context, record)
+                    navController.navigate("recommendations")
+                }
             } else {
                 navController.navigate("recognitionError")
             }
@@ -1142,7 +1186,6 @@ fun RecommendationsScreen(navController: NavHostController) {/// тут фикс
         }
     }
 }
-
 @Composable
 fun RecommendationCard(title: String, description: String) {
     Card(
