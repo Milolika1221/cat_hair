@@ -45,7 +45,7 @@ class NeuralNetworkClient:
 
     async def _process_with_local_neural(
         self, image_data: ImageData
-    ) -> NeuralNetworkResponse:
+    ) -> NeuralNetworkResponse | None:
         """Обработка изображений локальной нейросетью"""
         logger.info("🧠 Обработка локальной нейросетью...")
 
@@ -91,7 +91,7 @@ class NeuralNetworkClient:
 
     async def analyze_and_process_image(
         self, request: NeuralNetworkRequest
-    ) -> NeuralNetworkResponse:
+    ) -> NeuralNetworkResponse | None:
         logger.info(
             f"📤 Отправка запроса в нейросеть: session_id={request.session_id}, cat_id={request.cat_id}"
         )
@@ -161,7 +161,9 @@ class NeuralNetworkClient:
                 )
 
     @staticmethod
-    def _parse_success_response(neural_data: Dict[str, Any]) -> NeuralNetworkResponse:
+    def _parse_success_response(
+        neural_data: Dict[str, Any],
+    ) -> NeuralNetworkResponse | None:
         logger.debug("🔄 Парсинг успешного ответа от нейросети")
         analysis_data = neural_data.get("analysis_result", {})
         analysis_result = AnalysisResult(
@@ -172,7 +174,13 @@ class NeuralNetworkClient:
             predicted_class=analysis_data.get("predicted_class", ""),
         )
 
-        image_data = neural_data.get("processed_image", Any)
+        image_data = (
+            neural_data["processed_image"] if "processed_image" in neural_data else {}
+        )
+
+        if len(image_data) == 0:
+            return None
+
         image_bytes = base64.b64decode(image_data["data"])
         processed_image = ImageData(
             file_name=image_data["filename"],
@@ -287,6 +295,15 @@ class ImageProcessingService:
             )
             logger.info("🧠 Отправка изображений в нейросеть...")
             nn_response = await self.neural_client.analyze_and_process_image(nn_request)
+
+            if nn_response is None:
+                raise ProcessingException(
+                    ProcessingError(
+                        error_id="NEURAL_NETWORK_ERROR",
+                        error_type="neural_network",
+                        message="Ошибка нейросети",
+                    )
+                )
 
             recommendation = await self.recommendations_repo.create(
                 cat_id,
