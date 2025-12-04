@@ -2,8 +2,6 @@ import base64
 import logging
 import os
 import sys
-
-# import json
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -11,7 +9,6 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 
 # Добавляем путь к проекту для импорта модулей
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from cat_server.services.neural_service import neural_service
 
 
