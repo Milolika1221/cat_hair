@@ -24,7 +24,7 @@ from cat_server.services.user_session_service import UserSessionService
 router = APIRouter()
 
 
-@router.post("/session", response_model=SessionCreateResponse)
+@router.get("/session", response_model=SessionCreateResponse)
 async def create_session(
     user_session_service: UserSessionService = Depends(get_user_session_service),
 ):
