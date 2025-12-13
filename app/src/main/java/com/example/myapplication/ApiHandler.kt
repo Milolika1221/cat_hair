@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import retrofit2.HttpException
 import retrofit2.http.GET
@@ -16,7 +16,7 @@ import java.io.File
 import retrofit2.Response
 import java.io.IOException
 
-const val BaseUrl : String = "https://localhost:8000/api/v1";
+const val BASE_URL  = "http://192.168.43.19:8000/"
 
 
 fun File.determineMimeType(): String {
@@ -49,56 +49,61 @@ data class HaircutRecommendation(
 )
 
 data class CatUploadResponse(
+    @SerializedName("session_id")
     val sessionId: String,
+    @SerializedName("cat_id")
     val catId: Int,
+    @SerializedName("file_name")
     val filename: String,
+    @SerializedName("upload_timestamp")
     val uploadTimestamp: Float  // милисекунды
 )
 
 data class CreateSessionResponse(
+    @SerializedName("session_id")
     val sessionId: String,
     val status: String,
 )
 
 interface CatApiService {
-    @GET("$BaseUrl/{session_id}/{cat_id}/recommendations")
+    @GET("api/v1/{session_id}/{cat_id}/recommendations")
     suspend fun getRecommendations(
         @Path("session_id") sessionId: String,
         @Path("cat_id") catId: Int,
     ): CatRecommendationResponse
 
     @Multipart
-    @POST("$BaseUrl/{session_id}/{cat_id}/images")
+    @POST("api/v1/{session_id}/{cat_id}/images")
     suspend fun uploadCatPhoto(
         @Path("session_id") sessionId: String,
         @Path("cat_id") catId: Int,
-        @Part("file") photo: MultipartBody.Part
+        @Part file: MultipartBody.Part
     ): Response<CatUploadResponse>
 
-    @GET("session/")
+    @GET("api/v1/session")
     suspend fun createSession(): CreateSessionResponse
 }
 
-public class APIHandler(private val api: CatApiService) {
-    suspend fun createSession(): Result<CreateSessionResponse>
-    {
+class APIHandler(private val api: CatApiService) {
+    suspend fun createSession(): Result<CreateSessionResponse> {
         return try {
             val session = api.createSession()
             Result.success(session)
-        } catch (e: HttpException) {
+        } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     suspend fun uploadImage(
         sessionId: String,
+        imageBytes: ByteArray,
         catId: Int = 0,
-        imageFile: File
+        fileName: String = "some_cat.jpg",
+        mimeType: String = "image/jpeg",
     ): Result<CatUploadResponse> {
-        val mimeType = imageFile.determineMimeType()
-        val mediaType = mimeType.toMediaTypeOrNull() ?: "application/octet-stream".toMediaType()
-        val requestBody = imageFile.asRequestBody(mediaType)
-        val photoPart = MultipartBody.Part.createFormData("file", imageFile.name, requestBody)
+        val mediaType = mimeType.toMediaTypeOrNull() ?: "image/jpeg".toMediaType()
+        val requestBody = imageBytes.toRequestBody(mediaType)
+        val photoPart = MultipartBody.Part.createFormData("file", fileName, requestBody)
 
         return try {
             val response = api.uploadCatPhoto(sessionId, catId, photoPart)
