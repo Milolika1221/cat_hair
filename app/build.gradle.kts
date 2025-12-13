@@ -82,6 +82,10 @@ dependencies {
     implementation ("androidx.camera:camera-lifecycle:1.3.0")
     implementation ("androidx.camera:camera-view:1.3.0")
 
+    // для HTTP запросов
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
     // Разрешения
     implementation ("com.google.accompanist:accompanist-permissions:0.31.0-alpha")
 
