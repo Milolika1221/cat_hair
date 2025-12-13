@@ -105,6 +105,12 @@ object HistoryManager {
         return Base64.encodeToString(byteArray, Base64.DEFAULT)
     }
 
+    fun Bitmap.toByteArray(): ByteArray {
+        val outputStream = ByteArrayOutputStream()
+        this.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        return outputStream.toByteArray()
+    }
+
     // Конвертация base64 в Bitmap
     fun base64ToBitmap(base64String: String): Bitmap? {
         return try {
