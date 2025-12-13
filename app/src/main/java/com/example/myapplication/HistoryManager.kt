@@ -11,12 +11,14 @@ import java.io.ByteArrayOutputStream
 
 // Класс для хранения записи истории
 data class HistoryRecord(
+    val catId: Int,
     val image: String,          // Base64 строка с изображением
-    val title: String = "Лев"   // Название стрижки (будет от нейросети)
+    val title: String = "Неизвестная стрижка"    // Название стрижки (будет от нейросети)
 ) {
     // Сериализация в JSON строку
     fun toJsonString(): String {
         return JSONObject().apply {
+            put("cat_id", catId)
             put("image", image)
             put("title", title)
         }.toString()
@@ -27,8 +29,9 @@ data class HistoryRecord(
         fun fromJsonString(jsonString: String): HistoryRecord {
             val json = JSONObject(jsonString)
             return HistoryRecord(
+                catId = json.getInt("cat_id"),
                 image = json.getString("image"),
-                title = json.optString("title", "Лев")
+                title = json.optString("title", "Неизвестная стрижка")
             )
         }
     }
