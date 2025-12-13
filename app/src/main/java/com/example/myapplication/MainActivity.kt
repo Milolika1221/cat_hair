@@ -26,12 +26,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import kotlinx.coroutines.delay
 import androidx.camera.view.PreviewView
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.accompanist.permissions.rememberPermissionState
 import android.Manifest
 import android.graphics.Bitmap
+import android.net.Uri
+import android.util.Log
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
@@ -41,20 +42,25 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
-import com.example.myapplication.APIHandler
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.ByteArrayOutputStream
 
 val retrofit = Retrofit.Builder()
-    .baseUrl("https://api.example.com/")
+    .baseUrl(BASE_URL)
     .addConverterFactory(GsonConverterFactory.create())
     .build()
 
 val apiService = retrofit.create(CatApiService::class.java)
 
 val handler = APIHandler(apiService)
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,7 +87,23 @@ class MainActivity : ComponentActivity() {
                         composable("gallery") { GalleryScreen(navController) }
                         composable("photoPreview") { PhotoPreviewScreen(navController) }
                         composable("analysis") { AnalysisScreen(navController) }
-                        composable("recommendations") { RecommendationsScreen(navController) }
+                        composable(
+                            "recommendations/{title}/{description}",
+                            arguments = listOf(
+                                navArgument("title") { type = NavType.StringType },
+                                navArgument("description") { type = NavType.StringType },
+                            )
+                        ) { backStackEntry ->
+                            val title = backStackEntry.arguments?.getString("title") ?: "Unknown"
+                            val description = backStackEntry.arguments?.getString("description") ?: ""
+
+
+                            RecommendationsScreen(
+                                navController = navController,
+                                title = title,
+                                description = description,
+                            )
+                        }
                         composable("recognitionError") { RecognitionErrorScreen(navController) }
                     }
                 }
@@ -210,9 +232,8 @@ fun InstructionsScreen(navController: NavHostController) {
 
         InstructionItem("1. Сделайте фото кота при хорошем освещении")
         InstructionItem("2. Убедитесь, что кот виден целиком")
-        InstructionItem("3. Выберите до 5 фото разных ракурсов")
-        InstructionItem("4. Наш AI проанализирует тип шерсти и телосложение")
-        InstructionItem("5. Получите рекомендации по стрижке")
+        InstructionItem("3. Наш AI проанализирует тип шерсти и телосложение")
+        InstructionItem("4. Получите рекомендации по стрижке")
     }
 }
 
@@ -620,6 +641,8 @@ fun CameraScreen(navController: NavHostController) {
 @Composable
 fun GalleryScreen(navController: NavHostController) {
     val context = LocalContext.current
+
+
     var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     // Версия для разрешения к галерее в зависимости от версии Android
@@ -946,6 +969,8 @@ fun PhotoPreviewScreen(navController: NavHostController) {
 fun AnalysisScreen(navController: NavHostController) {
     val context = LocalContext.current
 
+    var mySession: String by remember {mutableStateOf("")}
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -983,26 +1008,89 @@ fun AnalysisScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Автоматический переход через 3 секунды
-        LaunchedEffect(Unit) {
-            delay(3000L)
-
-            val isSuccess = listOf(true, true).random() // Параметр нужно будет настроить. Стоит так для проверки
-
-            if (isSuccess) {
-                AppState.capturedImageBitmap?.let { bitmap ->
-                    val imageBase64 = HistoryManager.bitmapToBase64(bitmap)
-                    val record = HistoryRecord(
-                        image = imageBase64,
-                        title = "Лев"
-                    )
-                    HistoryManager.addRecord(context, record)
-                    navController.navigate("recommendations")
+        LaunchedEffect(mySession) {
+            try {
+                // Создание сессии, если её нет
+                val session = mySession.ifEmpty {
+                    handler.createSession()
+                        .onFailure {
+                            navController.navigate("recognitionError")
+                            return@LaunchedEffect
+                        }
+                        .getOrNull()?.sessionId
+                        ?: run {
+                            navController.navigate("recognitionError")
+                            return@LaunchedEffect
+                        }
                 }
-            } else {
+
+                // Проверка наличия bitmap
+                val bitmap = AppState.capturedImageBitmap
+                    ?: run {
+                        Log.e("AnalysisScreen", "No captured image")
+                        navController.navigate("photoPreview")
+                        return@LaunchedEffect
+                    }
+
+                // Конвертация bitmap в bytes
+                val imageBytes = withContext(Dispatchers.Default) {
+                    ByteArrayOutputStream().use { stream ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+                        stream.toByteArray()
+                    }
+                }
+
+                // Загрузка изображения
+                val uploadImageResponse = handler.uploadImage(session, imageBytes)
+                    .onFailure {
+                        navController.navigate("recognitionError")
+                        return@LaunchedEffect
+                    }
+
+                // Получение рекомендаций
+                val getRecommendationResponse = handler.getRecommendations(
+                    sessionId = session,
+                    catId = uploadImageResponse.getOrNull()!!.catId
+                ).onFailure {
+                    navController.navigate("recognitionError")
+                    return@LaunchedEffect
+                }
+
+                // Безопасное извлечение данных с проверкой
+                val uploadResult = uploadImageResponse.getOrNull()
+                    ?: run {
+                        navController.navigate("recognitionError")
+                        return@LaunchedEffect
+                    }
+
+                val recommendationResult = getRecommendationResponse.getOrNull()
+                    ?: run {
+                        navController.navigate("recognitionError")
+                        return@LaunchedEffect
+                    }
+
+                // Добавление записи в историю
+                HistoryManager.addRecord(
+                    context = context,
+                    HistoryRecord(
+                        catId = recommendationResult.catId,
+                        image = recommendationResult.imageBase64,
+                        title = uploadResult.filename
+                    )
+                )
+
+                // Навигация с закодированными параметрами
+                navController.navigate(
+                    "recommendations/" + "${Uri.encode(recommendationResult.recommendation.name)}/" +
+                            Uri.encode(recommendationResult.recommendation.description)
+                )
+
+            } catch (e: Exception) {
+                Log.e("AnalysisScreen", "Unexpected error", e)
                 navController.navigate("recognitionError")
             }
         }
+
 
         // Кнопка для ручного перехода
         TextButton(
@@ -1131,7 +1219,11 @@ fun RecognitionErrorScreen(navController: NavHostController) {
 
 // ЭКРАН 9 - Рекомендации
 @Composable
-fun RecommendationsScreen(navController: NavHostController) {/// тут фикс кароче должна нейронка выдавать тут для примера как в прототипах!!!!!!
+fun RecommendationsScreen(
+    navController: NavHostController,
+    title: String,
+    description: String,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1147,27 +1239,12 @@ fun RecommendationsScreen(navController: NavHostController) {/// тут фикс
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Фото", style = MaterialTheme.typography.bodyMedium)
-            }
-            Spacer(modifier = Modifier.height(32.dp))
+        RecommendationCard(
+            title = "Стрижка «$title»",
+            description = description
+        )
 
-            RecommendationCard(
-                title = "Стрижка «Лев»",
-                description = "Идеально подходит для густых волос, добавляет объем и текстуру. Требует минимальной укладки и отлично смотрится на круглых и квадратных лицах."
-            )
-
-        }
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
@@ -1178,10 +1255,9 @@ fun RecommendationsScreen(navController: NavHostController) {/// тут фикс
             },
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text("ЗАВЕРШИТЬ",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium)
+            Text("ЗАВЕРШИТЬ", style = MaterialTheme.typography.titleMedium)
         }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(
@@ -1192,12 +1268,11 @@ fun RecommendationsScreen(navController: NavHostController) {/// тут фикс
             },
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text("НОВЫЙ АНАЛИЗ",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium)
+            Text("НОВЫЙ АНАЛИЗ", style = MaterialTheme.typography.titleMedium)
         }
     }
 }
+
 @Composable
 fun RecommendationCard(title: String, description: String) {
     Card(
