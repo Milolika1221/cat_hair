@@ -45,7 +45,10 @@ data class HaircutRecommendation(
     val name: String,
 
     @SerializedName("haircut_description")
-    val description: String
+    val description: String,
+
+    @SerializedName("haircut_image")
+    val haircutImageBase64: String? = null
 )
 
 data class CatUploadResponse(
