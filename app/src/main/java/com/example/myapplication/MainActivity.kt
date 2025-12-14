@@ -30,7 +30,6 @@ import androidx.camera.view.PreviewView
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.accompanist.permissions.rememberPermissionState
 import android.Manifest
-import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import androidx.compose.ui.graphics.asImageBitmap
@@ -50,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import android.graphics.Bitmap
 import java.io.ByteArrayOutputStream
 
 val retrofit = Retrofit.Builder()
@@ -88,20 +88,25 @@ class MainActivity : ComponentActivity() {
                         composable("photoPreview") { PhotoPreviewScreen(navController) }
                         composable("analysis") { AnalysisScreen(navController) }
                         composable(
-                            "recommendations/{title}/{description}",
+                            "recommendations/{title}/{description}/{haircutImage}",
                             arguments = listOf(
                                 navArgument("title") { type = NavType.StringType },
                                 navArgument("description") { type = NavType.StringType },
+                                navArgument("haircutImage") {
+                                    type = NavType.StringType
+                                    defaultValue = ""
+                                }
                             )
                         ) { backStackEntry ->
                             val title = backStackEntry.arguments?.getString("title") ?: "Unknown"
                             val description = backStackEntry.arguments?.getString("description") ?: ""
-
+                            val haircutImageBase64 = backStackEntry.arguments?.getString("haircutImage") ?: ""
 
                             RecommendationsScreen(
                                 navController = navController,
                                 title = title,
                                 description = description,
+                                haircutImageBase64 = haircutImageBase64
                             )
                         }
                         composable("recognitionError") { RecognitionErrorScreen(navController) }
@@ -1069,20 +1074,29 @@ fun AnalysisScreen(navController: NavHostController) {
                         return@LaunchedEffect
                     }
 
-                // Добавление записи в историю
+                // Получаем название стрижки для истории
+                val haircutTitle = recommendationResult.recommendation.name
+
+                // Добавление записи в историю с соответствующим названием стрижки
                 HistoryManager.addRecord(
                     context = context,
                     HistoryRecord(
                         catId = recommendationResult.catId,
                         image = recommendationResult.imageBase64,
-                        title = uploadResult.filename
+                        title = haircutTitle
                     )
                 )
 
-                // Навигация с закодированными параметрами
+                // Кодируем параметры для навигации
+                val encodedTitle = Uri.encode(recommendationResult.recommendation.name)
+                val encodedDescription = Uri.encode(recommendationResult.recommendation.description)
+                val encodedHaircutImage = recommendationResult.recommendation.haircutImageBase64?.let {
+                    Uri.encode(it)
+                } ?: ""
+
+                // Навигация с передачей изображения стрижки
                 navController.navigate(
-                    "recommendations/" + "${Uri.encode(recommendationResult.recommendation.name)}/" +
-                            Uri.encode(recommendationResult.recommendation.description)
+                    "recommendations/$encodedTitle/$encodedDescription/$encodedHaircutImage"
                 )
 
             } catch (e: Exception) {
@@ -1223,26 +1237,52 @@ fun RecommendationsScreen(
     navController: NavHostController,
     title: String,
     description: String,
+    haircutImageBase64: String = ""
 ) {
+    // Декодируем base64 строку
+    val decodedTitle = Uri.decode(title)
+    val decodedDescription = Uri.decode(description)
+
+    // Конвертируем base64 в Bitmap
+    val haircutBitmap = remember(haircutImageBase64) {
+        if (haircutImageBase64.isNotEmpty()) {
+            try {
+                val decodedString = Uri.decode(haircutImageBase64)
+                HistoryManager.base64ToBitmap(decodedString)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        } else {
+            null
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            text = "Рекомендации по стрижке",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                text = "Рекомендации по стрижке",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-
         RecommendationCard(
-            title = "Стрижка «$title»",
-            description = description
+            title = decodedTitle,
+            description = decodedDescription,
+            haircutBitmap = haircutBitmap
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -1258,30 +1298,76 @@ fun RecommendationsScreen(
             Text("ЗАВЕРШИТЬ", style = MaterialTheme.typography.titleMedium)
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        TextButton(
-            onClick = {
-                navController.navigate("photoSource") {
-                    popUpTo("main") { inclusive = false }
-                }
-            },
-            modifier = Modifier.fillMaxWidth().height(56.dp)
-        ) {
-            Text("НОВЫЙ АНАЛИЗ", style = MaterialTheme.typography.titleMedium)
-        }
+            TextButton(
+                onClick = {
+                    // Очищаем состояние перед новым анализом
+                    AppState.capturedImageBitmap = null
+                    AppState.imageSource = ImageSource.NONE
+                    navController.navigate("photoSource") {
+                        popUpTo("main") { inclusive = false }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp)
+            ) {
+                Text("НОВЫЙ АНАЛИЗ", style = MaterialTheme.typography.titleMedium)
+            }
+            }
     }
 }
-
 @Composable
-fun RecommendationCard(title: String, description: String) {
+fun RecommendationCard(
+    title: String,
+    description: String,
+    haircutBitmap: Bitmap? = null
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Изображение стрижки
+            haircutBitmap?.let { bitmap ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Пример стрижки «$title»",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Пример стрижки:",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
