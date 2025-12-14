@@ -310,7 +310,18 @@ fun HistoryScreen(navController: NavHostController) {
                 onClick = {
                     // Сохранение записи в AppState
                     AppState.currentHistoryRecord = record
-                    navController.navigate("recommendations")
+
+                    // Кодируем параметры для безопасной навигации
+                    val encodedTitle = Uri.encode(record.title)
+                    val encodedDescription = Uri.encode(record.description)
+                    val encodedHaircutImage = record.haircutImage
+                        .replace('/', '_')
+                        .replace('+', '-')
+
+                    // Переход на экран рекомендаций со всеми данными
+                    navController.navigate(
+                        "recommendations/${encodedTitle}/${encodedDescription}/${encodedHaircutImage}"
+                    )
                 }
             )
             if (index < historyRecords.size - 1) {
@@ -1077,7 +1088,9 @@ fun AnalysisScreen(navController: NavHostController) {
                     HistoryRecord(
                         catId = recommendationResult.catId,
                         image = recommendationResult.imageBase64,
-                        title = haircutTitle
+                        title = haircutTitle,
+                        description = recommendationResult.recommendation.description,
+                        haircutImage = recommendationResult.imageBase64 // или другое изображение стрижки
                     )
                 )
 
