@@ -1061,12 +1061,6 @@ fun AnalysisScreen(navController: NavHostController) {
                     return@LaunchedEffect
                 }
 
-                // Безопасное извлечение данных с проверкой
-                val uploadResult = uploadImageResponse.getOrNull()
-                    ?: run {
-                        navController.navigate("recognitionError")
-                        return@LaunchedEffect
-                    }
 
                 val recommendationResult = getRecommendationResponse.getOrNull()
                     ?: run {
@@ -1088,15 +1082,12 @@ fun AnalysisScreen(navController: NavHostController) {
                 )
 
                 // Кодируем параметры для навигации
-                val encodedTitle = Uri.encode(recommendationResult.recommendation.name)
-                val encodedDescription = Uri.encode(recommendationResult.recommendation.description)
-                val encodedHaircutImage = recommendationResult.recommendation.haircutImageBase64?.let {
-                    Uri.encode(it)
-                } ?: ""
+                val description = recommendationResult.recommendation.description
+                val haircutImage = recommendationResult.imageBase64.replace('/', '_').replace('+', '-')
 
                 // Навигация с передачей изображения стрижки
                 navController.navigate(
-                    "recommendations/$encodedTitle/$encodedDescription/$encodedHaircutImage"
+                    "recommendations/$haircutTitle/$description/$haircutImage"
                 )
 
             } catch (e: Exception) {
@@ -1239,15 +1230,13 @@ fun RecommendationsScreen(
     description: String,
     haircutImageBase64: String = ""
 ) {
-    // Декодируем base64 строку
     val decodedTitle = Uri.decode(title)
     val decodedDescription = Uri.decode(description)
 
-    // Конвертируем base64 в Bitmap
     val haircutBitmap = remember(haircutImageBase64) {
         if (haircutImageBase64.isNotEmpty()) {
             try {
-                val decodedString = Uri.decode(haircutImageBase64)
+                val decodedString = haircutImageBase64.replace("_", "/").replace("-", "+")
                 HistoryManager.base64ToBitmap(decodedString)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -1262,20 +1251,14 @@ fun RecommendationsScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()) // ← только ОДИН скролл
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Text(
-                text = "Рекомендации по стрижке",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
+        Text(
+            text = "Рекомендации по стрижке",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -1298,22 +1281,20 @@ fun RecommendationsScreen(
             Text("ЗАВЕРШИТЬ", style = MaterialTheme.typography.titleMedium)
         }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-            TextButton(
-                onClick = {
-                    // Очищаем состояние перед новым анализом
-                    AppState.capturedImageBitmap = null
-                    AppState.imageSource = ImageSource.NONE
-                    navController.navigate("photoSource") {
-                        popUpTo("main") { inclusive = false }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp)
-            ) {
-                Text("НОВЫЙ АНАЛИЗ", style = MaterialTheme.typography.titleMedium)
-            }
-            }
+        TextButton(
+            onClick = {
+                AppState.capturedImageBitmap = null
+                AppState.imageSource = ImageSource.NONE
+                navController.navigate("photoSource") {
+                    popUpTo("main") { inclusive = false }
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) {
+            Text("НОВЫЙ АНАЛИЗ", style = MaterialTheme.typography.titleMedium)
+        }
     }
 }
 @Composable
