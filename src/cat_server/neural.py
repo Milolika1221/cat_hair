@@ -1,14 +1,10 @@
 import base64
 import logging
-import os
-import sys
 from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
-# Добавляем путь к проекту для импорта модулей
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from cat_server.services.neural_service import neural_service
 
 
@@ -192,8 +188,12 @@ async def model_info():
         }
 
 
-if __name__ == "__main__":
+def run_neural():
     import uvicorn
 
     print("🚀 Запуск реальной нейросети на http://localhost:8050/docs")
     uvicorn.run(app, host="0.0.0.0", port=8050, log_level="info")
+
+
+if __name__ == "__main__":
+    run_neural()
