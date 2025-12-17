@@ -3,3 +3,10 @@
 .gitignore
 __pycache__
 uploads/
+*.egg-info
+*.egg-info/*
+build/
+dist/
+.venv
+.uv
+uv.lock

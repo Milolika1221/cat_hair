@@ -74,13 +74,16 @@ async def health_check():
     }
 
 
-if __name__ == "__main__":
-    # Запуск из корня проекта: python -m cat_server.main
-    # Или через uvicorn: uvicorn cat_server.main:app --host 0.0.0.0 --port 8050 --reload
+def run_server():
+    """Запуск сервера через uvicorn (для uv run cat-hair-server)"""
     uvicorn.run(
-        "cat_server.main:app",  #
+        "cat_server.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,
         log_level="info",
     )
+
+
+if __name__ == "__main__":
+    run_server()
