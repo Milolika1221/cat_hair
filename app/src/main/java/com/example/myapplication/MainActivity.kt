@@ -26,12 +26,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import kotlinx.coroutines.delay
 import androidx.camera.view.PreviewView
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.accompanist.permissions.rememberPermissionState
 import android.Manifest
-import android.graphics.Bitmap
+import android.net.Uri
+import android.util.Log
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
@@ -41,13 +41,33 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import android.graphics.Bitmap
+import java.io.ByteArrayOutputStream
+
+val retrofit = Retrofit.Builder()
+    .baseUrl(BASE_URL)
+    .addConverterFactory(GsonConverterFactory.create())
+    .build()
+
+val apiService = retrofit.create(CatApiService::class.java)
+
+val handler = APIHandler(apiService)
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            HistoryManager.initialize(this)
+
             CatStyleTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -67,7 +87,28 @@ class MainActivity : ComponentActivity() {
                         composable("gallery") { GalleryScreen(navController) }
                         composable("photoPreview") { PhotoPreviewScreen(navController) }
                         composable("analysis") { AnalysisScreen(navController) }
-                        composable("recommendations") { RecommendationsScreen(navController) }
+                        composable(
+                            "recommendations/{title}/{description}/{haircutImage}",
+                            arguments = listOf(
+                                navArgument("title") { type = NavType.StringType },
+                                navArgument("description") { type = NavType.StringType },
+                                navArgument("haircutImage") {
+                                    type = NavType.StringType
+                                    defaultValue = ""
+                                }
+                            )
+                        ) { backStackEntry ->
+                            val title = backStackEntry.arguments?.getString("title") ?: "Unknown"
+                            val description = backStackEntry.arguments?.getString("description") ?: ""
+                            val haircutImageBase64 = backStackEntry.arguments?.getString("haircutImage") ?: ""
+
+                            RecommendationsScreen(
+                                navController = navController,
+                                title = title,
+                                description = description,
+                                haircutImageBase64 = haircutImageBase64
+                            )
+                        }
                         composable("recognitionError") { RecognitionErrorScreen(navController) }
                     }
                 }
@@ -160,8 +201,6 @@ fun MainScreen(navController: NavHostController) {
                 fontWeight = FontWeight.Medium
             )
         }
-
-
     }
 }
 
@@ -198,9 +237,8 @@ fun InstructionsScreen(navController: NavHostController) {
 
         InstructionItem("1. Сделайте фото кота при хорошем освещении")
         InstructionItem("2. Убедитесь, что кот виден целиком")
-        InstructionItem("3. Выберите до 5 фото разных ракурсов")
-        InstructionItem("4. Наш AI проанализирует тип шерсти и телосложение")
-        InstructionItem("5. Получите рекомендации по стрижке")
+        InstructionItem("3. Наш AI проанализирует тип шерсти и телосложение")
+        InstructionItem("4. Получите рекомендации по стрижке")
     }
 }
 
@@ -223,6 +261,9 @@ fun InstructionItem(text: String) {
 // ЭКРАН 3 - История
 @Composable
 fun HistoryScreen(navController: NavHostController) {
+    // Получаем записи из HistoryManager
+    val historyRecords = remember { HistoryManager.historyRecords }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -252,31 +293,47 @@ fun HistoryScreen(navController: NavHostController) {
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center
             )
+
+            // Индикатор количества записей
+            Text(
+                text = "(${historyRecords.size})",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Список карточек истории
-        HistoryCard(
-            title = "Лев",
-            onClick = {
-                navController.navigate("recommendations")
+        historyRecords.forEachIndexed { index, record ->
+            HistoryCard(
+                record = record,
+                onClick = {
+                    // Сохранение записи в AppState
+                    AppState.currentHistoryRecord = record
+
+                    // Кодируем параметры для безопасной навигации
+                    val encodedTitle = Uri.encode(record.title)
+                    val encodedDescription = Uri.encode(record.description)
+                    val encodedHaircutImage = record.haircutImage
+                        .replace('/', '_')
+                        .replace('+', '-')
+
+                    // Переход на экран рекомендаций со всеми данными
+                    navController.navigate(
+                        "recommendations/${encodedTitle}/${encodedDescription}/${encodedHaircutImage}"
+                    )
+                }
+            )
+            if (index < historyRecords.size - 1) {
+                Spacer(modifier = Modifier.height(16.dp))
             }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        HistoryCard(
-            title = "Лев",
-            onClick = {
-                navController.navigate("recommendations")
-            }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }
 
 @Composable
 fun HistoryCard(
-    title: String,
+    record: HistoryRecord,
     onClick: () -> Unit
 ) {
     Card(
@@ -292,21 +349,48 @@ fun HistoryCard(
             // Левая часть - фото
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .aspectRatio(1f)
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(
-                        color = Color.Gray.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(8.dp)
+                        color = Color.Gray.copy(alpha = 0.3f)
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Фото", color = Color.Gray)// TODO: Вместо Text, там должна быть фотография
+                // Пытаемся загрузить изображение из base64
+                record.image?.let { base64String ->
+                    val bitmap = HistoryManager.base64ToBitmap(base64String)
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Фото из истории",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        // Если не удалось загрузить
+                        Icon(
+                            painter = painterResource(id = android.R.drawable.ic_menu_camera),
+                            contentDescription = "Ошибка загрузки",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                } ?: run {
+                    // Если нет base64 строки
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_camera),
+                        contentDescription = "Нет фото",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
+            // Правая часть - информация
             Text(
-                text = title,
+                text = record.title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(3f)
@@ -386,7 +470,6 @@ fun PhotoSourceScreen(navController: NavHostController) {
         }
     }
 }
-
 
 // ЭКРАН 5 - Камера
 @OptIn(ExperimentalPermissionsApi::class)
@@ -574,6 +657,8 @@ fun CameraScreen(navController: NavHostController) {
 @Composable
 fun GalleryScreen(navController: NavHostController) {
     val context = LocalContext.current
+
+
     var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     // Версия для разрешения к галерее в зависимости от версии Android
@@ -898,6 +983,10 @@ fun PhotoPreviewScreen(navController: NavHostController) {
 // ЭКРАН 8 - Анализ
 @Composable
 fun AnalysisScreen(navController: NavHostController) {
+    val context = LocalContext.current
+
+    var mySession: String by remember {mutableStateOf("")}
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -935,18 +1024,91 @@ fun AnalysisScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Автоматический переход через 3 секунды
-        LaunchedEffect(Unit) {
-            delay(3000L)
+        LaunchedEffect(mySession) {
+            try {
+                // Создание сессии, если её нет
+                val session = mySession.ifEmpty {
+                    handler.createSession()
+                        .onFailure {
+                            navController.navigate("recognitionError")
+                            return@LaunchedEffect
+                        }
+                        .getOrNull()?.sessionId
+                        ?: run {
+                            navController.navigate("recognitionError")
+                            return@LaunchedEffect
+                        }
+                }
 
-            val isSuccess = listOf(true, false).random()
+                // Проверка наличия bitmap
+                val bitmap = AppState.capturedImageBitmap
+                    ?: run {
+                        Log.e("AnalysisScreen", "No captured image")
+                        navController.navigate("photoPreview")
+                        return@LaunchedEffect
+                    }
 
-            if (isSuccess) {
-                navController.navigate("recommendations")
-            } else {
+                // Конвертация bitmap в bytes
+                val imageBytes = withContext(Dispatchers.Default) {
+                    ByteArrayOutputStream().use { stream ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+                        stream.toByteArray()
+                    }
+                }
+
+                // Загрузка изображения
+                val uploadImageResponse = handler.uploadImage(session, imageBytes)
+                    .onFailure {
+                        navController.navigate("recognitionError")
+                        return@LaunchedEffect
+                    }
+
+                // Получение рекомендаций
+                val getRecommendationResponse = handler.getRecommendations(
+                    sessionId = session,
+                    catId = uploadImageResponse.getOrNull()!!.catId
+                ).onFailure {
+                    navController.navigate("recognitionError")
+                    return@LaunchedEffect
+                }
+
+
+                val recommendationResult = getRecommendationResponse.getOrNull()
+                    ?: run {
+                        navController.navigate("recognitionError")
+                        return@LaunchedEffect
+                    }
+
+                // Получаем название стрижки для истории
+                val haircutTitle = recommendationResult.recommendation.name
+
+                // Добавление записи в историю с соответствующим названием стрижки
+                HistoryManager.addRecord(
+                    context = context,
+                    HistoryRecord(
+                        catId = recommendationResult.catId,
+                        image = recommendationResult.imageBase64,
+                        title = haircutTitle,
+                        description = recommendationResult.recommendation.description,
+                        haircutImage = recommendationResult.imageBase64 // или другое изображение стрижки
+                    )
+                )
+
+                // Кодируем параметры для навигации
+                val description = recommendationResult.recommendation.description
+                val haircutImage = recommendationResult.imageBase64.replace('/', '_').replace('+', '-')
+
+                // Навигация с передачей изображения стрижки
+                navController.navigate(
+                    "recommendations/$haircutTitle/$description/$haircutImage"
+                )
+
+            } catch (e: Exception) {
+                Log.e("AnalysisScreen", "Unexpected error", e)
                 navController.navigate("recognitionError")
             }
         }
+
 
         // Кнопка для ручного перехода
         TextButton(
@@ -1075,12 +1237,34 @@ fun RecognitionErrorScreen(navController: NavHostController) {
 
 // ЭКРАН 9 - Рекомендации
 @Composable
-fun RecommendationsScreen(navController: NavHostController) {/// тут фикс кароче должна нейронка выдавать тут для примера как в прототипах!!!!!!
+fun RecommendationsScreen(
+    navController: NavHostController,
+    title: String,
+    description: String,
+    haircutImageBase64: String = ""
+) {
+    val decodedTitle = Uri.decode(title)
+    val decodedDescription = Uri.decode(description)
+
+    val haircutBitmap = remember(haircutImageBase64) {
+        if (haircutImageBase64.isNotEmpty()) {
+            try {
+                val decodedString = haircutImageBase64.replace("_", "/").replace("-", "+")
+                HistoryManager.base64ToBitmap(decodedString)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        } else {
+            null
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()) // ← только ОДИН скролл
     ) {
         Text(
             text = "Рекомендации по стрижке",
@@ -1091,27 +1275,12 @@ fun RecommendationsScreen(navController: NavHostController) {/// тут фикс
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        RecommendationCard(
+            title = decodedTitle,
+            description = decodedDescription,
+            haircutBitmap = haircutBitmap
+        )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Фото", style = MaterialTheme.typography.bodyMedium)
-            }
-            Spacer(modifier = Modifier.height(32.dp))
-
-            RecommendationCard(
-                title = "Стрижка «Лев»",
-                description = "Идеально подходит для густых волос, добавляет объем и текстуру. Требует минимальной укладки и отлично смотрится на круглых и квадратных лицах."
-            )
-
-        }
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
@@ -1122,36 +1291,77 @@ fun RecommendationsScreen(navController: NavHostController) {/// тут фикс
             },
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text("ЗАВЕРШИТЬ",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium)
+            Text("ЗАВЕРШИТЬ", style = MaterialTheme.typography.titleMedium)
         }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(
             onClick = {
+                AppState.capturedImageBitmap = null
+                AppState.imageSource = ImageSource.NONE
                 navController.navigate("photoSource") {
                     popUpTo("main") { inclusive = false }
                 }
             },
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text("НОВЫЙ АНАЛИЗ",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium)
+            Text("НОВЫЙ АНАЛИЗ", style = MaterialTheme.typography.titleMedium)
         }
     }
 }
-
 @Composable
-fun RecommendationCard(title: String, description: String) {
+fun RecommendationCard(
+    title: String,
+    description: String,
+    haircutBitmap: Bitmap? = null
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Изображение стрижки
+            haircutBitmap?.let { bitmap ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Пример стрижки «$title»",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Пример стрижки:",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,

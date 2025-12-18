@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    kotlin("plugin.serialization") version "1.9.22"
 }
 
 android {
@@ -81,6 +82,15 @@ dependencies {
     implementation ("androidx.camera:camera-lifecycle:1.3.0")
     implementation ("androidx.camera:camera-view:1.3.0")
 
+    // для HTTP запросов
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
     // Разрешения
     implementation ("com.google.accompanist:accompanist-permissions:0.31.0-alpha")
-}
+
+    // Модуль для преобразования из JSON
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0") // для автоматического парсинга JSON → Kotlin-объекты
+    // Опционально: логирование (для отладки)
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")}
