@@ -1,10 +1,12 @@
 import logging
-from os import path
+from pathlib import Path
 from typing import Any, Dict
 
 from cat_server.infrastructure.ai_model.dual_model_loader import DualModelLoader
 
 logger = logging.getLogger(__name__)
+
+base_dir = Path(__file__).resolve().parent.parent
 
 
 class NeuralService:
@@ -14,12 +16,8 @@ class NeuralService:
 
     async def initialize(self) -> bool:
         try:
-            main_model_path = path.join(
-                "cat_server", "infrastructure", "models", "main_model"
-            )
-            cat_filter_path = path.join(
-                "cat_server", "infrastructure", "models", "cat_filter"
-            )
+            main_model_path = str(base_dir / "infrastructure" / "models" / "main_model")
+            cat_filter_path = str(base_dir / "infrastructure" / "models" / "cat_filter")
 
             self.model_loader = DualModelLoader(
                 main_model_dir=main_model_path, cat_filter_model_dir=cat_filter_path

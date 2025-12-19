@@ -9,7 +9,7 @@ import tensorflow as tf
 
 logger = logging.getLogger(__name__)
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+base_directory = Path(__file__).resolve().parent.parent
 
 
 class DualModelLoader:
@@ -17,8 +17,8 @@ class DualModelLoader:
 
     def __init__(
         self,
-        main_model_dir: str = str(BASE_DIR / "models" / "main_model"),
-        cat_filter_model_dir: str = str(BASE_DIR / "models" / "cat_filter"),
+        main_model_dir: str = str(base_directory / "models" / "main_model"),
+        cat_filter_model_dir: str = str(base_directory / "models" / "cat_filter"),
     ):
         self.main_model_dir = main_model_dir
         self.cat_filter_model_dir = cat_filter_model_dir
@@ -39,6 +39,7 @@ class DualModelLoader:
 
             self.cat_filter_model = tf.saved_model.load(self.cat_filter_model_dir)
             logger.info("✅ Модель-фильтр кота загружена")
+            print("✅ Модель-фильтр кота загружена")
 
             # Загружаем основную модель стрижек
             if not os.path.exists(os.path.join(self.main_model_dir, "saved_model.pb")):
