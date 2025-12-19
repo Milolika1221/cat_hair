@@ -112,3 +112,8 @@ cat-server = "cat_server.main:run_server"
 cat-neural = "cat_server.neural:run_neural"
 db-init = "cat_server.scripts.database_init:run_create_db"
 add-haircuts = "cat_server.scripts.haircuts.add_haircut:run_add_haircuts"
+
+[tool.poetry]
+packages = [
+    { include = "cat_server", from = "src" }
+]

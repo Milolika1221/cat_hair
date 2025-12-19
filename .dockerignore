@@ -1,0 +1,44 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+.venv/*
+.uv
+uv.lock
+*.egg-info
+build/
+dist/
+
+# IDE
+.idea
+.vscode
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# Environment
+.env
+.env.*
+
+# Databases
+*.sqlite3
+*.db
+
+# Logs and caches
+*.log
+.cache
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# Test files
+.pytest_cache
+pytest.ini
+
+# Project-specific
+alembic/versions/
