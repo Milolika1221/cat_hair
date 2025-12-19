@@ -49,5 +49,9 @@ async def main():
             await add_haircut_in_db(repo, name, desc, img_bytes)
 
 
+def run_add_haircuts():
+    asyncio.run(main())
+
+
 if __name__ == "__main__":
     asyncio.run(main())

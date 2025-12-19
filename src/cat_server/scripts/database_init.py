@@ -16,6 +16,10 @@ async def drop_database():
     print("deleted")
 
 
+def run_create_db():
+    asyncio.run(create_database())
+
+
 if __name__ == "__main__":
     asyncio.run(create_database())
 
