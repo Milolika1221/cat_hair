@@ -44,14 +44,12 @@ WORKDIR /app
 # Копируем установленные пакеты
 COPY --from=builder --chown=appuser /usr/local /usr/local
 
-# КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Копируем ВЕСЬ src/ в корень приложения
 COPY --chown=appuser src/ ./src/
 
 # Копируем конфигурационные файлы
 COPY --chown=appuser pyproject.toml .
 COPY --chown=appuser ./src/cat_server/alembic.ini .
 
-# КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Правильный PYTHONPATH
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app/src
 ENV TF_CPP_MIN_LOG_LEVEL=2
@@ -59,5 +57,4 @@ ENV TF_CPP_MIN_LOG_LEVEL=2
 # Экспонируем порт
 EXPOSE 8000
 
-# КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Правильный путь к приложению
 CMD ["cat-server"]
