@@ -6,23 +6,61 @@
 ## **ВАЖНАЯ ИНФОРМАЦИЯ:** 
 Так как сервер не опубликован, то .ark-версия приложения не покажет функционал нейросети. Для этого придется скачать исходный код приложения из ветви и изменить BASE_URL (указать IP вашего локального или развернутого сервера).
 
-## **Docker-образ для сборки приложения:**
-Для автоматической сборки APK-файла из исходного кода доступен Docker-образ mila221/android-builder.
+## **Docker-образ для работы с приложением:**
 
-Это инструмент для сборки (CI/CD), а не готовое приложение для запуска.
+**Ссылка на образ:** https://hub.docker.com/r/mila221/cathair-dev
 
-**Ссылка на образ:** https://hub.docker.com/r/mila221/android-builder
-
-Как использовать образ для сборки:
+## Быстрое использование:
 ```bash
-# 1. Скачать образ сборщика
-docker pull mila221/android-builder:latest
+# 1. Скачать образ
+docker pull mila221/cathair-dev
 
-# 2. Собрать APK (исходный код должен быть в текущей папке)
-docker run --rm -v $(pwd):/app mila221/android-builder ./gradlew assembleDebug
+# 2. Собрать APK 
+docker run --rm -v $(pwd):/output mila221/cathair-dev \
+  sh -c "./gradlew assembleDebug && cp /opt/project/app/build/outputs/apk/debug/*.apk /output/"
 
-# 3. Собранный APK появится в локальной папке:
-#    ./app/build/outputs/apk/debug/app-debug.apk
+# 3. Изучить код
+docker run -it --rm mila221/cathair-dev ls /opt/project/app/src/main/kotlin/
+```
+
+## Интерактивная работа с кодом:
+Если вам нужно редактировать код, запускать тесты или работать с проектом напрямую:
+```bash
+# Способ A: Запустить командную оболочку внутри контейнера
+docker run -it --rm \
+  -v $(pwd)/my_project:/opt/project \
+  mila221/cathair-dev \
+  /bin/bash
+
+# Теперь вы внутри контейнера и можете:
+# cd /opt/project
+# nano app/src/main/kotlin/com/example/analys/MainActivity.kt  # Редактировать код
+# ./gradlew assembleDebug  # Собрать APK
+# ./gradlew test          # Запустить тесты
+# find /opt/project -name "*.kt"  # Найти все Kotlin файлы
+
+
+# Способ B: Создать постоянную среду разработки
+docker run -d --name cathair_workspace \
+  -v $(pwd)/my_project:/opt/project \
+  --restart unless-stopped \
+  mila221/cathair-dev \
+  sleep infinity
+
+# Подключиться к запущенному контейнеру в любое время
+docker exec -it cathair_workspace /bin/bash
+
+
+# Способ C: Прямой доступ к конкретным файлам
+# 1. Просмотреть структуру проекта
+docker run --rm mila221/cathair-dev find /opt/project/app/src/main/kotlin/ -type f -name "*.kt"
+
+# 2. Посмотреть конкретный файл
+docker run --rm mila221/cathair-dev cat /opt/project/app/src/main/kotlin/com/example/analys/MainActivity.kt
+
+# 3. Изменить BASE_URL и собрать (все в одной команде)
+docker run --rm -v $(pwd):/output mila221/cathair-dev \
+  sh -c "sed -i 's/BASE_URL = .*/BASE_URL = \"http:\/\/ВАШ_IP:8000\/\"/' /opt/project/app/src/main/kotlin/com/example/analys/MainActivity.kt && ./gradlew assembleDebug && cp /opt/project/app/build/outputs/apk/debug/*.apk /output/"
 ```
 
 ## **Сервер** (ветвь cat_server_development)
@@ -134,6 +172,7 @@ uv run cat-neural
         ifconfig
      ```
   2. Подключитесь с другого устройства по адресу: http://[ВАШ_IP]:8000 (надо будет изменить для приложения - BASE_URL)
+
 
 
 
