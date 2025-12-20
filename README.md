@@ -2,9 +2,14 @@
 
 **Сервер** (cat_server_development) - Бэкенд на Python с FastAPI и нейронной сетью для обработки изображений. Сервер необходимо размещать на хосте (платно), либо можно проверить локально, но тогда нужно менять IP
 
-## Ссылка на Docker (только сервер): https://hub.docker.com/r/mila221/cat-hair-api
+## Ссылка на Docker (сервер): [https://hub.docker.com/r/mila221/cat-hair-api](https://hub.docker.com/repository/docker/mila221/cat-hair-app/general)
 
-## Подробная инструкция для сервера (локальный запуск)
+После установления образа с Docker Hub запустить можно по команде:
+```bash
+docker run -p 8000:8000 mila221/cat-hair-app:latest
+```
+
+## Подробная инструкция для сервера (локальный запуск, если возникли проблемы с докером)
 ## Подготовка проекта
 Скачайте код сервера из ветки cat_server_development:
 ```bash
@@ -84,4 +89,5 @@ uv run cat-neural
         ifconfig
      ```
   2. Подключитесь с другого устройства по адресу: http://[ВАШ_IP]:8000 (надо будет изменить для приложения - BASE_URL)
+
 
