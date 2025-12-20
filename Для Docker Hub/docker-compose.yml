@@ -1,0 +1,37 @@
+version: '3.8'
+services:
+  app:
+    image: mila221/cat-hair-app  
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/src/cat_server/uploads  
+    environment:
+      - ENV=production  
+      - DATABASE_URL=postgresql+asyncpg://postgres:123456789@db:5432/cat-haircut
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=123456789
+      - POSTGRES_DB=cat-haircut
+    volumes:
+      - pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cat-haircut"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pg:
