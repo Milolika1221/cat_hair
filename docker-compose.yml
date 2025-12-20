@@ -26,7 +26,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=123456789
-      - POSTGRES_DB=cat_hair_db
+      - POSTGRES_DB=cat-haircut
     volumes:
       - pg:/var/lib/postgresql/data
     healthcheck:
