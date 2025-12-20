@@ -2,18 +2,18 @@
 
 **Сервер** (cat_server_development) - Бэкенд на Python с FastAPI и нейронной сетью для обработки изображений. Сервер необходимо размещать на хосте (платно), либо можно проверить локально, но тогда нужно менять IP
 
-## Ссылка на Docker (сервер): [https://hub.docker.com/r/mila221/cat-hair-api](https://hub.docker.com/repository/docker/mila221/cat-hair-app/general)
+## Ссылка на Docker (сервер): [[https://hub.docker.com/r/mila221/cat-hair-api]](https://hub.docker.com/r/mila221/cat-hair-app)
 
 ## Docker Hub - установка и запуск
 **1. Установка образа**
-Скачайте образ сервера с Docker Hub:
+  -Скачайте образ сервера с Docker Hub:
 ```bash
 docker pull mila221/cat-hair-app
 ```
 **2. Скачать docker-compose.yml файл** 
   -Название папки - "для Docker Hub"
 **3. Команда для запуска**
-Запустите весь сервер с БД одной командой:
+  -Запустите весь сервер с БД одной командой:
 ```bash
 docker-compose up -d
 ```
@@ -103,6 +103,7 @@ uv run cat-neural
         ifconfig
      ```
   2. Подключитесь с другого устройства по адресу: http://[ВАШ_IP]:8000 (надо будет изменить для приложения - BASE_URL)
+
 
 
 
