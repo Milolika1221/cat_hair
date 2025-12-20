@@ -1,0 +1,45 @@
+# Используем более новую версию (ваш проект на Gradle 8+)
+FROM gradle:8.2.1-jdk17-alpine
+
+# Переменные окружения
+ENV SDK_URL="https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip" \
+    ANDROID_HOME="/opt/android-sdk" \
+    ANDROID_SDK_ROOT="/opt/android-sdk" \
+    ANDROID_VERSION=33 \
+    ANDROID_BUILD_TOOLS_VERSION=33.0.0
+
+# Устанавливаем Android SDK и компоненты
+RUN mkdir -p "$ANDROID_HOME/cmdline-tools" && \
+    cd "$ANDROID_HOME/cmdline-tools" && \
+    wget -q $SDK_URL -O tools.zip && \
+    unzip -q tools.zip && \
+    rm tools.zip && \
+    mv cmdline-tools latest
+
+# Принимаем лицензии автоматически
+RUN mkdir -p "$ANDROID_HOME/licenses" && \
+    echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license" && \
+    echo "84831b9409646a918e30573bab4c9c91346d8" > "$ANDROID_HOME/licenses/android-sdk-preview-license" && \
+    echo "d975f751698a77b662f1254ddbeed3901e976f5a" > "$ANDROID_HOME/licenses/intel-android-extra-license"
+
+# Устанавливаем SDK компоненты (тихий режим)
+RUN $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --update
+RUN $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT \
+    "platforms;android-${ANDROID_VERSION}" \
+    "build-tools;${ANDROID_BUILD_TOOLS_VERSION}" \
+    "platform-tools" \
+    "ndk;25.1.8937393" \
+    "cmake;3.22.1" > /dev/null 2>&1
+
+# Копируем проект
+WORKDIR /app
+COPY . .
+
+# Настраиваем кеш Gradle для ускорения сборок
+ENV GRADLE_USER_HOME /gradle-cache
+
+# Даем права на выполнение gradlew
+RUN chmod +x gradlew
+
+# Сборка проекта
+CMD ["./gradlew", "assembleDebug"]
