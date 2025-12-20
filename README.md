@@ -4,10 +4,24 @@
 
 ## Ссылка на Docker (сервер): [https://hub.docker.com/r/mila221/cat-hair-api](https://hub.docker.com/repository/docker/mila221/cat-hair-app/general)
 
-После установления образа с Docker Hub запустить можно по команде:
+## Docker Hub - установка и запуск
+**1. Установка образа**
+Скачайте образ сервера с Docker Hub:
 ```bash
-docker run -p 8000:8000 mila221/cat-hair-app:latest
+docker pull mila221/cat-hair-app
 ```
+**2. Скачать docker-compose.yml файл** 
+Название папки - "для Docker Hub"
+**3. Команда для запуска**
+Запустите весь сервер с БД одной командой:
+```bash
+docker-compose up -d
+```
+
+**Проверка работы:**
+  -Сервер: http://localhost:8000
+  -Документация API: http://localhost:8000/docs
+  -Health check: http://localhost:8000/health
 
 ## Подробная инструкция для сервера (локальный запуск, если возникли проблемы с докером)
 ## Подготовка проекта
@@ -89,5 +103,6 @@ uv run cat-neural
         ifconfig
      ```
   2. Подключитесь с другого устройства по адресу: http://[ВАШ_IP]:8000 (надо будет изменить для приложения - BASE_URL)
+
 
 
