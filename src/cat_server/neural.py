@@ -191,8 +191,8 @@ async def model_info():
 def run_neural():
     import uvicorn
 
-    print("🚀 Запуск реальной нейросети на http://localhost:8051/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8051, log_level="info")
+    print("🚀 Запуск реальной нейросети на http://localhost:8050/docs")
+    uvicorn.run(app, host="0.0.0.0", port=8050, log_level="info")
 
 
 if __name__ == "__main__":
