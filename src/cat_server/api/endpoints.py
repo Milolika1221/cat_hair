@@ -2,7 +2,8 @@ import base64
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
+import redis.asyncio as aioredis
+from fastapi import APIRouter, Depends, File, HTTPException, Path, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cat_server.api.schemas import (
@@ -13,6 +14,7 @@ from cat_server.api.schemas import (
 from cat_server.core.dependencies import (
     get_db_session,
     get_image_processing_service,
+    get_redis,
     get_user_session_service,
 )
 from cat_server.domain.dto import ImageData, ProcessingException
@@ -26,9 +28,20 @@ router = APIRouter()
 
 @router.get("/session", response_model=SessionCreateResponse)
 async def create_session(
+    request: Request,
     user_session_service: UserSessionService = Depends(get_user_session_service),
+    redis: aioredis.Redis = Depends(get_redis),
 ):
+    client_ip = request.client.host if request.client else "unknown"
+
+    redis_key = f"u_ip:{client_ip}"
+
+    existing_session = await redis.get(redis_key)
+    if existing_session:
+        return SessionCreateResponse(session_id=existing_session)
+
     session_id = await user_session_service.create_session()
+    await redis.setex(redis_key, 3600, session_id)
     return SessionCreateResponse(session_id=session_id)
 
 

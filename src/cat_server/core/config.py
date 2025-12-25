@@ -6,7 +6,10 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://postgres:123456789@localhost:5432/cat-haircut"
     )
 
+    MAIN_API_URL: str = "http://localhost:8000"
     NEURAL_API_URL: str = "http://localhost:8050"
+    REDIS_URL: str = "redis://localhost:6379/0"
+
     NEURAL_API_TIMEOUT: int = 60
 
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
