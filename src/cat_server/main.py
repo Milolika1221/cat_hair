@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
 
+import redis.asyncio as aioredis
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,32 +9,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from cat_server.api.endpoints import router
 from cat_server.core.config import settings
 from cat_server.core.database import check_database_connection
-from cat_server.services.neural_service import neural_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🚀 Starting Cat AI API...")
 
+    # Инициализация Redis
+    redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    app.state.redis = redis_client  # ← сохраняем в состоянии приложения
     try:
         await check_database_connection()
         print("✅ Database connection OK")
     except Exception as e:
-        print(f"❌ Database connection failed: {e}")
+        await redis_client.aclose()
+        print(f"❌ Startup failed: {e}")
         raise
 
-    # Инициализация нейросети
-    try:
-        await neural_service.initialize()
-        print("✅ Neural network loaded OK")
-    except Exception as e:
-        print(f"⚠️ Neural network loading failed: {e}")
-
     print("✅ API is ready at http://localhost:8000")
-    print("📚 Documentation: http://localhost:8000/docs")
+    print("📚 Docs at http://localhost:8000/docs")
+    yield
 
-    yield  # Здесь приложение работает
-
+    # Очистка
+    await app.state.redis.aclose()
     print("🛑 Shutting down Cat Grooming API...")
 
 

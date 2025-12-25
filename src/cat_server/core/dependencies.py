@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cat_server.core.config import settings
 from cat_server.core.database import AsyncSessionLocal
+from cat_server.services.neural_service import NeuralService
 from cat_server.services.user_session_service import UserSessionService
 
 
@@ -15,6 +16,13 @@ async def get_redis() -> aioredis.Redis:
 
 
 RedisDep = Annotated[aioredis.Redis, Depends(get_redis)]
+
+
+async def get_neural_service():
+    return NeuralService()
+
+
+NeuralDep = Annotated[NeuralService, Depends(get_neural_service)]
 
 
 async def get_db_session():
