@@ -68,13 +68,13 @@ docker run --rm -v $(pwd):/output mila221/cathair-dev \
 
 Сервер необходимо размещать на хосте (платно), либо можно проверить локально, но тогда нужно менять IP
 
-**Ссылка на образ:** [https://hub.docker.com/r/mila221/android-builder](https://hub.docker.com/r/mila221/cat-hair-app)
+[**Докер Образ**](https://hub.docker.com/r/mkken1/cat-hair)
 
 ## Docker Hub - установка и запуск сервера
 ## **1. Установка образа**
 Скачайте образ сервера с Docker Hub:
 ```bash
-docker pull mila221/cat-hair-app
+docker pull mkken1/cat-hair
 ```
 ## **2. Скачать docker-compose.yml файл** 
 Название папки - "для Docker Hub"
@@ -83,7 +83,20 @@ docker pull mila221/cat-hair-app
 ```bash
 docker-compose up -d
 ```
+## **4. Предварительная настройка
+```bash
+# Создание таблиц в БД
+docker compose exec app db-init
 
+# Добавление стрижек в БД
+docker compose exec app add-haircuts
+
+# Запуск нейронной сети (желательно открыть в новом терминале)
+docker compose exec app cat-neural
+
+# Контроль логов (опционально)
+docker compose logs app
+```
 ## **Проверка работы:**
 
 Сервер: http://localhost:8000
