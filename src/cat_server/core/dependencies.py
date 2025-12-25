@@ -39,7 +39,7 @@ def get_image_processing_service(
     recommendations_repo = RecommendationsRepository(db_session)
 
     neural_client = NeuralNetworkClient(
-        base_url=settings.NEUTRAL_API_URL, timeout=settings.NEURAL_API_TIMEOUT
+        base_url=settings.NEURAL_API_URL, timeout=settings.NEURAL_API_TIMEOUT
     )
 
     return ImageProcessingService(
