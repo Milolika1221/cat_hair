@@ -27,7 +27,7 @@ class Cats(Base):
 class Recommendations(Base):
     __tablename__ = "Recommendations"
 
-    id: Mapped[int] = mapped_column(primary_key=True)  # ← явный PK
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     cat_id: Mapped[int] = mapped_column(ForeignKey("Cats.CatID"))
     haircut_id: Mapped[int] = mapped_column(ForeignKey("Haircuts.HaircutID"))
     confidence: Mapped[float]
