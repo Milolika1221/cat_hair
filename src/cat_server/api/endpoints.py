@@ -79,19 +79,15 @@ async def upload_images(
         raise HTTPException(status_code=400, detail="Invalid image")
 
     # Добавляем изображения в сессию
-    success = await user_session_service.add_image_to_session(
-        session_id=session_id, image_data=image_data
-    )
-    if not success:
-        raise HTTPException(status_code=404, detail="Failed to store images in session")
-
-    cat_repo = CatsRepository(db_session)
+    # success = await user_session_service.add_image_to_session(
+    #     session_id=session_id, image_data=image_data
+    # )
+    # if not success:
+    #     raise HTTPException(status_code=404, detail="Failed to store images in session")
 
     #  cat_id: новый или существующий
-    if cat_id == 0:
-        cat = await cat_repo.create()
-        cat_id = cat.id  # pyright: ignore[reportAssignmentType]
-    else:
+    if cat_id != 0:
+        cat_repo = CatsRepository(db_session)
         cat = await cat_repo.get_by_id(cat_id)
         if cat is None:
             raise HTTPException(status_code=404, detail="Cat not found")
@@ -105,19 +101,15 @@ async def upload_images(
             upload_timestamp=datetime.now().timestamp() - start_time.timestamp(),
         )
 
-    await user_session_service.link_cat_to_session(session_id, cat_id)
-
     try:
-        result = await image_processing_service.process_images(
-            session_id=session_id, cat_id=cat_id, image_data=image_data
-        )
+        result = await image_processing_service.process_images(image_data=image_data)
         if result.status == "error":
             raise HTTPException(
                 status_code=400,
                 detail=result.error.message if result.error else "Processing Failed",
             )
-
-        # Формируем ответы пользователю
+        cat_id = result.cat_id
+        await user_session_service.link_cat_to_session(session_id, cat_id)
         curr_time = datetime.now().timestamp() - start_time.timestamp()
         response = ImageUploadResponse(
             cat_id=cat_id,

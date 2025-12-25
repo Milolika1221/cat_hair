@@ -3,7 +3,7 @@ from datetime import datetime
 
 import redis.asyncio as aioredis
 
-from cat_server.domain.dto import ImageData, SessionData
+from cat_server.domain.dto import SessionData
 
 
 class UserSessionService:
@@ -23,22 +23,10 @@ class UserSessionService:
         return session_id
 
     async def get_session(self, session_id: str) -> SessionData:
-        data = await self.redis.get(f"session:{session_id}")
-        if data is None:
+        session = await self.redis.get(f"session:{session_id}")
+        if session is None:
             raise ValueError(f"Session {session_id} not found")
-        return SessionData.model_validate_json(data)
-
-    async def add_image_to_session(
-        self, session_id: str, image_data: ImageData
-    ) -> bool:
-        try:
-            session = await self.get_session(session_id)
-            session.status = "processing"
-            session.image = image_data
-            await self._save_session(session_id, session)
-            return True
-        except ValueError:
-            return False
+        return SessionData.model_validate_json(session)
 
     async def link_cat_to_session(self, session_id: str, cat_id: int) -> bool:
         try:
