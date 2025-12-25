@@ -1,13 +1,12 @@
-version: '3.8'
 services:
   app:
-    image: mila221/cat-hair-app  
+    image: mila221/cat-hair-app
     ports:
       - "8000:8000"
     volumes:
-      - ./uploads:/app/src/cat_server/uploads  
+      - ./uploads:/app/src/cat_server/uploads
     environment:
-      - ENV=production  
+      - ENV=production
       - DATABASE_URL=postgresql+asyncpg://postgres:123456789@db:5432/cat-haircut
       - PYTHONUNBUFFERED=1
     depends_on:
@@ -19,6 +18,10 @@ services:
       timeout: 5s
       retries: 10
 
+  redis-container:
+    image: redis:7
+    ports:
+      - 6379
   db:
     image: postgres:15-alpine
     environment:
