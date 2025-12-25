@@ -16,7 +16,7 @@ import java.io.File
 import retrofit2.Response
 import java.io.IOException
 
-const val BASE_URL  = "http://192.168.10.159:8000"
+const val BASE_URL  = "http://192.168.43.19:8000"
 
 
 fun File.determineMimeType(): String {
