@@ -1,4 +1,4 @@
-## **Мобильное приложение** (ветвь cat_hair_app)
+# **Мобильное приложение** (ветвь cat_hair_app)
 Готовую сборку (.ark файл) можно скачать в разделе **Releases** этой ветки, либо по QR-код ниже.
 
 ![qr-code](https://github.com/user-attachments/assets/b27b843c-915c-4db0-8f45-678ce3eed9e2)
@@ -63,18 +63,18 @@ docker run --rm -v $(pwd):/output mila221/cathair-dev \
   sh -c "sed -i 's/BASE_URL = .*/BASE_URL = \"http:\/\/ВАШ_IP:8000\/\"/' /opt/project/app/src/main/kotlin/com/example/analys/MainActivity.kt && ./gradlew assembleDebug && cp /opt/project/app/build/outputs/apk/debug/*.apk /output/"
 ```
 
-## **Сервер** (ветвь cat_server_development)
+# **Сервер** (ветвь cat_server_development)
 Бэкенд на Python с FastAPI и нейронной сетью для обработки изображений. 
 
 Сервер необходимо размещать на хосте (платно), либо можно проверить локально, но тогда нужно менять IP
 
-**Ссылка на образ:** [https://hub.docker.com/r/mila221/android-builder](https://hub.docker.com/r/mila221/cat-hair-app)
+[**Докер Образ**](https://hub.docker.com/r/mkken1/cat-hair)
 
 ## Docker Hub - установка и запуск сервера
 ## **1. Установка образа**
 Скачайте образ сервера с Docker Hub:
 ```bash
-docker pull mila221/cat-hair-app
+docker pull mkken1/cat-hair
 ```
 ## **2. Скачать docker-compose.yml файл** 
 Название папки - "для Docker Hub"
@@ -83,7 +83,20 @@ docker pull mila221/cat-hair-app
 ```bash
 docker-compose up -d
 ```
+## **4. Предварительная настройка
+```bash
+# Создание таблиц в БД
+docker compose exec app db-init
 
+# Добавление стрижек в БД
+docker compose exec app add-haircuts
+
+# Запуск нейронной сети (желательно открыть в новом терминале)
+docker compose exec app cat-neural
+
+# Контроль логов (опционально)
+docker compose logs app
+```
 ## **Проверка работы:**
 
 Сервер: http://localhost:8000
@@ -92,7 +105,7 @@ docker-compose up -d
 
 Health check: http://localhost:8000/health
 
-## Подробная инструкция для сервера (локальный запуск, если возникли проблемы с докером)
+# Подробная инструкция для сервера (локальный запуск, если возникли проблемы с докером)
 ## Подготовка проекта
 Скачайте код сервера из ветки cat_server_development:
 ```bash
@@ -172,6 +185,7 @@ uv run cat-neural
         ifconfig
      ```
   2. Подключитесь с другого устройства по адресу: http://[ВАШ_IP]:8000 (надо будет изменить для приложения - BASE_URL)
+
 
 
 

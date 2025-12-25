@@ -9,17 +9,22 @@ services:
       - ./uploads:/app/src/cat_server/uploads
     environment:
       - ENV=development
+      - REDIS_URL=redis://redis-container:6379/0
       - DATABASE_URL=postgresql+asyncpg://postgres:123456789@db:5432/cat-haircut
       - PYTHONUNBUFFERED=1
     depends_on:
       db:
         condition: service_healthy
-    command: uvicorn cat_server.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 10
+
+  redis-container:
+    image: redis:7
+    ports:
+      - "6379:6379"
 
   db:
     image: postgres:15-alpine

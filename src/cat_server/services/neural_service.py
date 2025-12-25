@@ -44,6 +44,3 @@ class NeuralService:
                 return {"success": False, "error": "Нейросеть не загружена"}
 
         return self.model_loader.predict(image_data, require_cat=check_cat)  # pyright: ignore[reportOptionalMemberAccess]
-
-
-neural_service = NeuralService()

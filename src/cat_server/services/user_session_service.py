@@ -1,55 +1,49 @@
-import asyncio
 import uuid
 from datetime import datetime
-from typing import Dict
 
-from cat_server.domain.interfaces import ImageData, IUserSessionService, SessionData
+import redis.asyncio as aioredis
+
+from cat_server.domain.dto import SessionData
 
 
-class UserSessionService(IUserSessionService):
-    def __init__(self):
-        self._lock = asyncio.Lock()
-        self._sessions: Dict[str, SessionData] = {}
-        self.session_id = None
+class UserSessionService:
+    def __init__(self, redis: aioredis.Redis, session_ttl: int = 3600):
+        self.redis = redis
+        self.session_ttl = session_ttl
 
     async def create_session(self) -> str:
-        self.session_id = str(uuid.uuid4())
-        async with self._lock:
-            self._sessions[self.session_id] = SessionData(
-                session_id=self.session_id,
-                created_at=datetime.now(),
-                image=None,
-                status="active",
-            )
-            print(f"✅ Session created and stored: {self.session_id}")
-            return self.session_id
+        session_id = str(uuid.uuid4())
+        session = SessionData(
+            session_id=session_id,
+            created_at=datetime.now(),
+            status="active",
+        )
+        await self._save_session(session_id, session)
+        print(f"✅ Session created and stored in Redis: {session_id}")
+        return session_id
 
     async def get_session(self, session_id: str) -> SessionData:
-        async with self._lock:
-            if session_id not in self._sessions:
-                raise ValueError(f"Session {session_id} not found")
-            return self._sessions[session_id]
-
-    async def add_image_to_session(
-        self, session_id: str, image_data: ImageData
-    ) -> bool:
-        async with self._lock:
-            if session_id not in self._sessions:
-                return False
-            self._sessions[session_id].status = "processing"
-            self._sessions[session_id].image = image_data
-            return True
+        session = await self.redis.get(f"session:{session_id}")
+        if session is None:
+            raise ValueError(f"Session {session_id} not found")
+        return SessionData.model_validate_json(session)
 
     async def link_cat_to_session(self, session_id: str, cat_id: int) -> bool:
-        async with self._lock:
-            if session_id not in self._sessions:
-                return False
-            self._sessions[session_id].cat_id = cat_id
+        try:
+            session = await self.get_session(session_id)
+            session.cat_id = cat_id
+            await self._save_session(session_id, session)
             return True
+        except ValueError:
+            return False
 
     async def delete_session(self, session_id: str) -> bool:
-        async with self._lock:
-            if session_id in self._sessions:
-                del self._sessions[session_id]
-                return True
-            return False
+        result = await self.redis.delete(f"session:{session_id}")
+        return result > 0
+
+    async def _save_session(self, session_id: str, session: SessionData) -> None:
+        await self.redis.setex(
+            f"session:{session_id}",
+            self.session_ttl,
+            session.model_dump_json(),
+        )

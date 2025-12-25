@@ -17,7 +17,7 @@ class ImageData(BaseModel):
 class SessionData(BaseModel):
     session_id: str
     created_at: datetime
-    image: ImageData | None
+    image: Optional["ImageData"] = None
     cat_id: Optional[int] = None
     status: str  # 'active', 'processing', 'completed', 'error'
 
@@ -59,8 +59,7 @@ class ImageProcessingResponse(BaseModel):
 
 
 class ProcessingResult(BaseModel):
-    session_id: str
-    cat_id: int
+    cat_id: int = 0
     analysis_result: AnalysisResult | str = "nothing"
     processing_time_ms: int
     status: str
@@ -74,8 +73,6 @@ class ValidationResult(BaseModel):
 
 # GET/POST из веб-сервиса ИИ
 class NeuralNetworkRequest(BaseModel):
-    session_id: str
-    cat_id: int
     image: "ImageData"
     processing_type: str = "analysis"  # "analysis", "enhancement", "segmentation"
 

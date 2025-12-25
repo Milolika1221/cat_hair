@@ -1,7 +1,6 @@
-# Stage 1: Builder - для сборки зависимостей
+# Stage 1: Builder
 FROM python:3.13-slim-bookworm AS builder
 
-# Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
@@ -10,22 +9,21 @@ RUN apt-get update && apt-get install -y \
     libxrender1 \
     libfontconfig1 \
     libglib2.0-0 \
+    libgomp1 \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Копируем зависимости
 COPY pyproject.toml .
 
-# Устанавливаем uv и зависимости
+# Устанавливаем глобально (без .venv)
 RUN pip install uv && \
-    UV_PROJECT_ENVIRONMENT=/app/.venv uv pip install --system -e .
+    uv pip install --system --no-cache-dir -e .
 
-# Stage 2: Runtime - финальный образ
+# Stage 2: Runtime
 FROM python:3.13-slim-bookworm
 
-# Устанавливаем runtime зависимости
 RUN apt-get update && apt-get install -y \
     libpq5 \
     libgl1 \
@@ -33,28 +31,24 @@ RUN apt-get update && apt-get install -y \
     libxrender1 \
     libfontconfig1 \
     libglib2.0-0 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Создаем пользователя без пароля
 RUN adduser --disabled-password --gecos '' appuser
 USER appuser
 
 WORKDIR /app
 
-# Копируем установленные пакеты
+# Копируем системный Python (где всё установлено)
 COPY --from=builder --chown=appuser /usr/local /usr/local
 
 COPY --chown=appuser src/ ./src/
-
-# Копируем конфигурационные файлы
 COPY --chown=appuser pyproject.toml .
-COPY --chown=appuser ./src/cat_server/alembic.ini .
 
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/src
-ENV TF_CPP_MIN_LOG_LEVEL=2
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src \
+    TF_CPP_MIN_LOG_LEVEL=2
 
-# Экспонируем порт
 EXPOSE 8000
 
-CMD ["cat-server"]
+CMD ["uvicorn", "cat_server.main:app", "--host", "0.0.0.0", "--port", "8000"]

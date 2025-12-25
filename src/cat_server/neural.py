@@ -5,21 +5,27 @@ from datetime import datetime
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
-from cat_server.services.neural_service import neural_service
+from cat_server.core.dependencies import get_neural_service
+
+neural_service = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🧠 Инициализация нейросети...")
+    print("🧠 Инициализация нейросети...")
+    global neural_service
+
+    neural_service = await get_neural_service()
     success = await neural_service.initialize()
     if success:
-        logger.info("✅ Нейросеть готова к работе")
+        print("✅ Нейросеть готова к работе")
+        app.state.neural_service = neural_service
     else:
         logger.error("❌ Не удалось загрузить нейросеть")
 
     yield
 
-    logger.info(" Неросеть ушла спать")
+    print(" Неросеть ушла спать")
 
 
 app = FastAPI(title="Real Neural Network API", version="1.0.0", lifespan=lifespan)
@@ -31,7 +37,7 @@ async def process_images(
     image: UploadFile = File(..., description="Изображение кота"),
 ):
     # Проверяем что нейросеть загружена
-    if not neural_service.is_loaded:
+    if not neural_service.is_loaded:  # pyright: ignore[reportOptionalMemberAccess]
         raise HTTPException(status_code=500, detail="Нейросеть не загружена")
 
     try:
@@ -40,7 +46,7 @@ async def process_images(
 
         # Обрабатываем через нейросеть
         start_time = datetime.now()
-        result = await neural_service.process_image(image_data)
+        result = await neural_service.process_image(image_data)  # pyright: ignore[reportOptionalMemberAccess]
         processing_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
 
         # Если на изображении не кот - сообщаем об этом
@@ -91,7 +97,7 @@ async def process_images(
             },
         }
 
-        logger.info(
+        print(
             f"✅ Успешная обработка: {top_prediction['class_name']} ({top_prediction['confidence']:.2%})"
         )
         return response_data
@@ -106,18 +112,18 @@ async def health_check():
     # Проверка статуса нейросети
     try:
         status = {
-            "status": "ready" if neural_service.is_loaded else "not_loaded",
-            "model_loaded": neural_service.is_loaded,
+            "status": "ready" if neural_service.is_loaded else "not_loaded",  # pyright: ignore[reportOptionalMemberAccess]
+            "model_loaded": neural_service.is_loaded,  # pyright: ignore[reportOptionalMemberAccess]
             "timestamp": datetime.now().isoformat(),
         }
 
         # Добавляем дополнительную информацию для диагностики
-        if hasattr(neural_service, "model_loader") and neural_service.model_loader:
+        if hasattr(neural_service, "model_loader") and neural_service.model_loader:  # pyright: ignore[reportOptionalMemberAccess]
             status["main_model_loaded"] = (
-                neural_service.model_loader.main_model is not None
+                neural_service.model_loader.main_model is not None  # pyright: ignore[reportOptionalMemberAccess]
             )
             status["cat_filter_loaded"] = (
-                neural_service.model_loader.cat_filter_model is not None
+                neural_service.model_loader.cat_filter_model is not None  # pyright: ignore[reportOptionalMemberAccess]
             )
 
         return status
@@ -135,30 +141,30 @@ async def health_check():
 async def model_info():
     # Информация о загруженной модели
     try:
-        if not neural_service.is_loaded:
+        if not neural_service.is_loaded:  # pyright: ignore[reportOptionalMemberAccess]
             return {"loaded": False, "error": "Нейросеть не загружена"}
 
-        if not neural_service.model_loader:
+        if not neural_service.model_loader:  # pyright: ignore[reportOptionalMemberAccess]
             return {"loaded": False, "error": "Загрузчик моделей не инициализирован"}
 
         # Проверяем наличие метаданных для обеих моделей
         main_metadata = None
         cat_filter_metadata = None
 
-        if hasattr(neural_service.model_loader, "main_metadata"):
-            main_metadata = neural_service.model_loader.main_metadata
+        if hasattr(neural_service.model_loader, "main_metadata"):  # pyright: ignore[reportOptionalMemberAccess]
+            main_metadata = neural_service.model_loader.main_metadata  # pyright: ignore[reportOptionalMemberAccess]
 
-        if hasattr(neural_service.model_loader, "cat_filter_metadata"):
-            cat_filter_metadata = neural_service.model_loader.cat_filter_metadata
+        if hasattr(neural_service.model_loader, "cat_filter_metadata"):  # pyright: ignore[reportOptionalMemberAccess]
+            cat_filter_metadata = neural_service.model_loader.cat_filter_metadata  # pyright: ignore[reportOptionalMemberAccess]
 
         response = {
-            "loaded": neural_service.is_loaded,
-            "main_model_loaded": neural_service.model_loader.main_model is not None
-            if neural_service.model_loader
+            "loaded": neural_service.is_loaded,  # pyright: ignore[reportOptionalMemberAccess]
+            "main_model_loaded": neural_service.model_loader.main_model is not None  # pyright: ignore[reportOptionalMemberAccess]
+            if neural_service.model_loader  # pyright: ignore[reportOptionalMemberAccess]
             else False,
-            "cat_filter_loaded": neural_service.model_loader.cat_filter_model
+            "cat_filter_loaded": neural_service.model_loader.cat_filter_model  # pyright: ignore[reportOptionalMemberAccess]
             is not None
-            if neural_service.model_loader
+            if neural_service.model_loader  # pyright: ignore[reportOptionalMemberAccess]
             else False,
         }
 
@@ -180,19 +186,25 @@ async def model_info():
         return {
             "loaded": False,
             "error": str(e),
-            "is_loaded": neural_service.is_loaded
+            "is_loaded": neural_service.is_loaded  # pyright: ignore[reportOptionalMemberAccess]
             if hasattr(neural_service, "is_loaded")
             else None,
             "has_model_loader": hasattr(neural_service, "model_loader")
-            and neural_service.model_loader is not None,
+            and neural_service.model_loader is not None,  # pyright: ignore[reportOptionalMemberAccess]
         }
 
 
 def run_neural():
     import uvicorn
 
-    print("🚀 Запуск реальной нейросети на http://localhost:8051/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8051, log_level="info")
+    print("🚀 Запуск реальной нейросети на http://localhost:8050/docs")
+    uvicorn.run(
+        "cat_server.neural:app",
+        host="0.0.0.0",
+        port=8050,
+        reload=True,
+        log_level="info",
+    )
 
 
 if __name__ == "__main__":

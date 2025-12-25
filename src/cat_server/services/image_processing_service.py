@@ -5,7 +5,6 @@ import base64
 import io
 import json
 import logging
-import os
 from datetime import datetime
 from typing import Any, Dict, List
 
@@ -28,10 +27,9 @@ from cat_server.infrastructure.repositories import (
     IHaircutsRepository,
     IRecommendationsRepository,
 )
-from cat_server.services.neural_service import neural_service
+from cat_server.services.neural_service import NeuralService
 from cat_server.services.user_session_service import UserSessionService
 
-# ✅ Настройка логгера
 logger = logging.getLogger(__name__)
 
 
@@ -39,15 +37,15 @@ class NeuralNetworkClient:
     def __init__(self, base_url: str, timeout: int = 60):
         self.base_url = base_url
         self.timeout = timeout
-        logger.info(
+        print(
             f"🔧 NeuralNetworkClient инициализирован с URL: {base_url}, timeout: {timeout}"
         )
 
     async def _process_with_local_neural(
-        self, image_data: ImageData
+        self, image_data: ImageData, neural_service: NeuralService
     ) -> NeuralNetworkResponse | None:
         """Обработка изображений локальной нейросетью"""
-        logger.info("🧠 Обработка локальной нейросетью...")
+        print("🧠 Обработка локальной нейросетью...")
 
         neural_result = await neural_service.process_image(image_data.data)
 
@@ -92,9 +90,6 @@ class NeuralNetworkClient:
     async def analyze_and_process_image(
         self, request: NeuralNetworkRequest
     ) -> NeuralNetworkResponse | None:
-        logger.info(
-            f"📤 Отправка запроса в нейросеть: session_id={request.session_id}, cat_id={request.cat_id}"
-        )
         async with aiohttp.ClientSession() as session:
             form_data = aiohttp.FormData()
             form_data.add_field(
@@ -105,8 +100,6 @@ class NeuralNetworkClient:
             )
 
             metadata = {
-                "session_id": request.session_id,
-                "cat_id": request.cat_id,
                 "processed_at": request.processing_type,
                 "image_metadata": {
                     "filename": request.image.file_name,
@@ -117,18 +110,16 @@ class NeuralNetworkClient:
             }
             form_data.add_field("metadata", json.dumps(metadata))
             try:
-                logger.debug(f"📡 Отправка POST-запроса на {self.base_url}")
+                print(f"📡 Отправка POST-запроса на {self.base_url}")
                 async with session.post(
                     f"{self.base_url}",
                     data=form_data,
                     timeout=aiohttp.ClientTimeout(total=self.timeout),
                 ) as response:
-                    logger.info(
-                        f"📥 Получен ответ от нейросети: статус {response.status}"
-                    )
+                    print(f"📥 Получен ответ от нейросети: статус {response.status}")
                     if response.status == 200:
                         response_data = await response.json()
-                        logger.debug(f"✅ Успешный ответ от нейросети: {response_data}")
+                        print(f"✅ Успешный ответ от нейросети: {response_data}")
                         return self._parse_success_response(response_data)
                     else:
                         processing_error = await self._handle_http_error(response)
@@ -164,7 +155,7 @@ class NeuralNetworkClient:
     def _parse_success_response(
         neural_data: Dict[str, Any],
     ) -> NeuralNetworkResponse | None:
-        logger.debug("🔄 Парсинг успешного ответа от нейросети")
+        print("🔄 Парсинг успешного ответа от нейросети")
         analysis_data = neural_data.get("analysis_result", {})
         analysis_result = AnalysisResult(
             confidence=analysis_data.get("confidence", 0.0),
@@ -197,7 +188,7 @@ class NeuralNetworkClient:
             processing_time_ms=neural_data.get("processing_time_ms", 0),
             processing_metadata=neural_data.get("processing_metadata", {}),
         )
-        logger.info("✅ Ответ от нейросети успешно распарсен")
+        print("✅ Ответ от нейросети успешно распарсен")
         return result
 
     @staticmethod
@@ -254,46 +245,24 @@ class ImageProcessingService:
         recommendations_repo: IRecommendationsRepository,
         user_session_service: UserSessionService,
         neural_client: NeuralNetworkClient,
-        upload_dir: str = "uploads",
     ):
         self.cats_repo = cats_repo
         self.haircut_repo = haircut_repo
         self.recommendations_repo = recommendations_repo
         self.user_session_service = user_session_service
         self.neural_client = neural_client
-        self.upload_dir = upload_dir
-
-        os.makedirs(upload_dir, exist_ok=True)
-        logger.info(
-            f"📁 ImageProcessingService инициализирован, upload_dir: {upload_dir}"
-        )
 
     async def process_images(
-        self, session_id: str, cat_id: int, image_data: ImageData
+        self,
+        image_data: ImageData,
     ) -> ProcessingResult:
         start_time = datetime.now()
-        logger.info(
-            f"🚀 Начало обработки изображений: session_id={session_id}, cat_id={cat_id}"
-        )
         try:
-            cat = await self.cats_repo.get_by_id(cat_id)
-            if not cat:
-                logger.warning(f"🐱 Кот не найден: cat_id={cat_id}")
-                raise ProcessingException(
-                    ProcessingError(
-                        error_id="CAT_NOT_FOUND",
-                        error_type="database",
-                        message="Кот не найден",
-                    )
-                )
-
             nn_request = NeuralNetworkRequest(
-                session_id=session_id,
-                cat_id=cat_id,
                 image=image_data,
                 processing_type="analysis and enhancement",
             )
-            logger.info("🧠 Отправка изображений в нейросеть...")
+            print("🧠 Отправка изображений в нейросеть...")
             nn_response = await self.neural_client.analyze_and_process_image(nn_request)
 
             if nn_response is None:
@@ -301,8 +270,6 @@ class ImageProcessingService:
                     (datetime.now() - start_time).total_seconds() * 1000
                 )
                 return ProcessingResult(
-                    session_id=session_id,
-                    cat_id=cat_id,
                     analysis_result="nothing",
                     processing_time_ms=processing_time_ms,
                     status="error",
@@ -314,8 +281,10 @@ class ImageProcessingService:
                     ),
                 )
 
+            cat = await self.cats_repo.create()
+
             recommendation = await self.recommendations_repo.create(
-                cat_id,
+                cat.id,  # pyright: ignore[reportArgumentType]
                 nn_response.analysis_result.predicted_class,
                 nn_response.analysis_result.confidence,
             )
@@ -324,16 +293,16 @@ class ImageProcessingService:
             processing_time_ms = int(
                 (datetime.now() - start_time).total_seconds() * 1000
             )
-            logger.info(f"✅ Обработка завершена успешно: время={processing_time_ms}ms")
+            print(f"✅ Обработка завершена успешно: время={processing_time_ms}ms")
 
             return ProcessingResult(
-                session_id=session_id,
                 cat_id=cat.id,  # pyright: ignore[reportArgumentType]
                 analysis_result=nn_response.analysis_result,
                 processing_time_ms=processing_time_ms,
                 status="completed",
                 error=None,
             )
+
         except ProcessingException as e:
             logger.warning(
                 f"⚠️ Обработка завершена с ошибкой (ожидаемой): {e.error.message}"
@@ -342,8 +311,6 @@ class ImageProcessingService:
                 (datetime.now() - start_time).total_seconds() * 1000
             )
             return ProcessingResult(
-                session_id=session_id,
-                cat_id=cat_id,
                 processing_time_ms=processing_time_ms,
                 status="error",
                 error=e.error,
@@ -354,8 +321,6 @@ class ImageProcessingService:
                 (datetime.now() - start_time).total_seconds() * 1000
             )
             return ProcessingResult(
-                session_id=session_id,
-                cat_id=cat_id,
                 analysis_result="nothing",
                 processing_time_ms=processing_time_ms,
                 status="error",
@@ -368,7 +333,7 @@ class ImageProcessingService:
             )
 
     async def validate_image(self, image_data: ImageData) -> ValidationResult:
-        logger.debug("🔍 Начало валидации изображений...")
+        print("🔍 Начало валидации изображений...")
         errors = []
 
         if image_data.size > 10 * 1024 * 1024:  # 10MB
@@ -410,7 +375,7 @@ class ImageProcessingService:
                 )
             )
 
-        logger.debug(f"🔍 Валидация завершена: ошибок={len(errors)}")
+        print(f"🔍 Валидация завершена: ошибок={len(errors)}")
         return ValidationResult(is_valid=len(errors) == 0, errors=errors)
 
     async def get_processing_result(self, cat_id: int) -> Dict[str, Any] | None:
