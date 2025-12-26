@@ -68,7 +68,7 @@ docker run --rm -v $(pwd):/output mila221/cathair-dev \
 
 Сервер необходимо размещать на хосте (платно), либо можно проверить локально, но тогда нужно менять IP
 
-[**Докер Образ**](https://hub.docker.com/r/mkken1/cat-hair)
+[**Докер Образ**](https://hub.docker.com/layers/mkken1/cat-hair/stable/images/sha256-dd180076c488970ce9fc1652a0c01c639ccc0f4f9943406b7fd42f7c0d56032e)
 
 ## Docker Hub - установка и запуск сервера
 ## **1. Установка образа**
@@ -185,6 +185,7 @@ uv run cat-neural
         ifconfig
      ```
   2. Подключитесь с другого устройства по адресу: http://[ВАШ_IP]:8000 (надо будет изменить для приложения - BASE_URL)
+
 
 
 
