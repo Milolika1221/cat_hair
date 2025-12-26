@@ -1,5 +1,6 @@
 import asyncio
 import io
+from importlib import resources
 from pathlib import Path
 
 from PIL import Image
@@ -15,21 +16,34 @@ HAIRCUT_DESCRIPTIONS = {
     "Дракон": "Самый креативный и экстравагантный вариант. Шерсть на теле сбривается, а вдоль спины оставляют полосу шерсти («гребень»), которая может быть ровной или с узорами. Часто дополняется рисунками (молнии, зигзаги) на боках. Это чисто декоративная стрижка для смелых владельцев.",
 }
 
-haircuts_dir = Path(__file__).parent / "haircut_images"
-haircuts_data = []
 
-for p in haircuts_dir.iterdir():
-    if p.is_file():
-        name = p.stem
-        description = HAIRCUT_DESCRIPTIONS.get(name)
-        if description is None:
-            print(f"Нет описания для стрижки: {name}. Пропускаем.")
-            continue
+def load_haircut_data():
+    """Загружает данные о стрижках из ресурсов пакета."""
+    haircuts_data = []
 
-        with Image.open(p) as img:
-            buf = io.BytesIO()
-            img.save(buf, format=img.format or "PNG")
-            haircuts_data.append((name, description, buf.getvalue()))
+    # Используем importlib.resources для надёжного доступа к ресурсам
+    with resources.path(
+        "cat_server.scripts.haircuts", "haircut_images"
+    ) as haircuts_dir:
+        for p in Path(haircuts_dir).iterdir():
+            if p.is_file():
+                name = p.stem
+                description = HAIRCUT_DESCRIPTIONS.get(name)
+                if description is None:
+                    print(f"Нет описания для стрижки: {name}. Пропускаем.")
+                    continue
+
+                try:
+                    with Image.open(p) as img:
+                        buf = io.BytesIO()
+                        img_format = img.format or "PNG"
+                        img.save(buf, format=img_format)
+                        haircuts_data.append((name, description, buf.getvalue()))
+                except Exception as e:
+                    print(f"Ошибка при обработке изображения {p.name}: {e}")
+                    continue
+
+    return haircuts_data
 
 
 async def add_haircut_in_db(
@@ -43,13 +57,21 @@ async def add_haircut_in_db(
 
 
 async def main():
+    haircuts_data = load_haircut_data()
+    if not haircuts_data:
+        print("⚠️ Нет данных о стрижках для загрузки.")
+        return
+
     async with AsyncSessionLocal() as session:
         repo = HaircutsRepository(session)
         for name, desc, img_bytes in haircuts_data:
+            print(f"Загружаем стрижку: {name}")
             await add_haircut_in_db(repo, name, desc, img_bytes)
+    print("✅ Все стрижки успешно загружены.")
 
 
 def run_add_haircuts():
+    """Точка входа для CLI скрипта (например, при вызове add-haircuts)."""
     asyncio.run(main())
 
 

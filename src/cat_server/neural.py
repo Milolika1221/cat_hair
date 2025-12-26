@@ -202,7 +202,7 @@ def run_neural():
         "cat_server.neural:app",
         host="0.0.0.0",
         port=8050,
-        reload=True,
+        # reload=True,
         log_level="info",
     )
 
