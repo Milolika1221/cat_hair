@@ -74,7 +74,7 @@ docker run --rm -v $(pwd):/output mila221/cathair-dev \
 ## **1. Установка образа**
 Скачайте образ сервера с Docker Hub:
 ```bash
-docker pull mkken1/cat-hair
+docker pull mkken1/cat-hair:stable
 ```
 ## **2. Скачать docker-compose.yml файл** 
 Название папки - "для Docker Hub"
@@ -185,6 +185,7 @@ uv run cat-neural
         ifconfig
      ```
   2. Подключитесь с другого устройства по адресу: http://[ВАШ_IP]:8000 (надо будет изменить для приложения - BASE_URL)
+
 
 
 
