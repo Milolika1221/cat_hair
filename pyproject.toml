@@ -118,3 +118,13 @@ add-haircuts = "cat_server.scripts.haircuts.add_haircut:run_add_haircuts"
 packages = [
     { include = "cat_server", from = "src" }
 ]
+
+[tool.setuptools.package-data]
+cat_server = [
+    "scripts/haircuts/haircut_images/*",
+    "infrastructure/models/**/*"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["cat_server*"]

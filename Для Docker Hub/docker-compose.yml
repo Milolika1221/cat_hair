@@ -1,30 +1,30 @@
 services:
   app:
-    image: mkken1/cat-hair:latest
+    image: mkken1/cat-hair:stable
     ports:
       - "8000:8000"
-    volumes:
-      - ./src/cat_server:/app/src/cat_server
-      - ./uploads:/app/src/cat_server/uploads
     environment:
-      - ENV=production
-      - REDIS_URL=redis://redis-container:6379/0
+      - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql+asyncpg://postgres:123456789@db:5432/cat-haircut
       - PYTHONUNBUFFERED=1
     depends_on:
       db:
         condition: service_healthy
-
+      redis:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 10
 
-  redis-container:
+  redis:
     image: redis:7
-    ports:
-      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   db:
     image: postgres:15-alpine
@@ -33,7 +33,7 @@ services:
       - POSTGRES_PASSWORD=123456789
       - POSTGRES_DB=cat-haircut
     volumes:
-      - pg:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d cat-haircut"]
       interval: 5s
@@ -41,4 +41,4 @@ services:
       retries: 10
 
 volumes:
-  pg:
+  pgdata:
