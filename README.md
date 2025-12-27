@@ -76,14 +76,13 @@ docker run --rm -v $(pwd):/output mila221/cathair-dev \
 ```bash
 docker pull mkken1/cat-hair:stable
 ```
-## **2. Скачать docker-compose.yml файл** 
-Название папки - "для Docker Hub"
+## **2. Скачать docker-compose.yml** -> [файл](https://github.com/Milolika1221/cat_hair/blob/main/%D0%94%D0%BB%D1%8F%20Docker%20Hub/docker-compose.yml) 
 ## **3. Команда для запуска**
 Запустите весь сервер с базой данных одной командой:
 ```bash
 docker-compose up -d
 ```
-## **4. Предварительная настройка
+## 4. Предварительная настройка
 ```bash
 # Создание таблиц в БД
 docker compose exec app db-init
@@ -91,7 +90,7 @@ docker compose exec app db-init
 # Добавление стрижек в БД
 docker compose exec app add-haircuts
 
-# Запуск нейронной сети (желательно открыть в новом терминале)
+# Запуск нейронной сети (желательно открыть в новом терминале, ну чоб удобней емае)
 docker compose exec app cat-neural
 
 # Контроль логов (опционально)
@@ -123,7 +122,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-Или с помощью официальных python-установщиков [PyPI](https://pypi.org/project/uv/):
+Или с помощью официальных python-установщиков [PyPI](https://pypi.org/project/uv/), устанавливаем глобально (must-have штука):
 
 ```bash
 # С помощью pip.
@@ -135,19 +134,10 @@ pip install uv
 pipx install uv
 ```
 
-## Запуск локального Redis-хранилища
-```bash
-wsl --install -d Ubuntu-22.04
-
-# внутри wsl после регистрации пользователя скачиваем пакет сервера, запускается автоматически
-sudo apt-get install redis-server
-```
-
-
 ## Установка пакетов (библиотек)
 Команда сначала проверяет установленные пакеты, а потом собирает (или пересобирает) проект. Всегда применять при изменении проекта.
 ```bash
-# Установка из зависисмостей указанных в конфигурационном файле(pyproject.toml)
+# Установка из зависисмостей указанных в конфигурационном файле (pyproject.toml)
 uv pip install -e .
 ```
 
@@ -157,7 +147,22 @@ uv pip install -e .
 uv build
 ```
 
-## Инициализация базы данных
+## Запуск локального Redis-хранилища (требуется [WSL](https://learn.microsoft.com/ru-ru/windows/wsl/install), т.к. для винды больше не слон)
+```bash
+# скачиваем стабильный дистрибутив
+wsl --install -d Ubuntu-22.04
+
+# внутри wsl после регистрации пользователя скачиваем пакет сервера, запускается автоматически (наверное)
+sudo apt-get install redis-server
+
+# проверка активности
+sudo systemctl status redis-server
+
+# запуск redis-сервера, слушает порт 6379
+sudo systemctl start redis-server
+```
+
+## Инициализация базы данных 
 Перед первым запуском необходимо создать и настроить БД:
 ```bash 
 uv run db-init
@@ -173,8 +178,7 @@ uv run add-haircuts
 ```bash
 # основной сервер
 uv run cat-server
-```
-```bash
+
 # нейронка
 uv run cat-neural
 ```
@@ -190,10 +194,12 @@ uv run cat-neural
      ```bash
         # Windows
         ipconfig
-        # macOS/Linux
+       
+        # macOS или Linux  
         ifconfig
      ```
-  2. Подключитесь с другого устройства по адресу: http://[ВАШ_IP]:8000 (надо будет изменить для приложения - BASE_URL)
+  2. Подключитесь с другого устройства по адресу: http://[ВАШ_IP]:8000 (надо будет изменить глобальную переменную ***BASE_URL*** в [ApiHandler.kt](https://github.com/Milolika1221/cat_hair/blob/cat_hair_app/app/src/main/java/com/example/myapplication/ApiHandler.kt) в мобильном приложении и настроить предваритеьлно брандмауэр)
+
 
 
 
