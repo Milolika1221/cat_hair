@@ -77,15 +77,8 @@ async def upload_images(
     image_is_valid = await image_processing_service.validate_image(image_data)
     if not image_is_valid.is_valid:
         raise HTTPException(status_code=400, detail="Invalid image")
-
-    # Добавляем изображения в сессию
-    # success = await user_session_service.add_image_to_session(
-    #     session_id=session_id, image_data=image_data
-    # )
-    # if not success:
-    #     raise HTTPException(status_code=404, detail="Failed to store images in session")
-
-    #  cat_id: новый или существующий
+        
+    # Если кот уже существует
     if cat_id != 0:
         cat_repo = CatsRepository(db_session)
         cat = await cat_repo.get_by_id(cat_id)
