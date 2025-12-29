@@ -17,9 +17,8 @@ from cat_server.core.dependencies import (
     get_redis,
     get_user_session_service,
 )
-from cat_server.domain.dto import ImageData, ProcessingException
-from cat_server.infrastructure import HaircutsRepository
-from cat_server.infrastructure.repositories import CatsRepository
+from cat_server.domain.dto import ImageData, ProcessingException 
+from cat_server.infrastructure.repositories import CatsRepository, HaircutsRepository
 from cat_server.services.image_processing_service import ImageProcessingService
 from cat_server.services.user_session_service import UserSessionService
 
